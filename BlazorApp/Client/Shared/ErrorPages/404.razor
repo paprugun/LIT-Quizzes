@@ -1,0 +1,18 @@
+﻿@page "/404"
+@page "/404/{ErrMessage}"
+@layout EmptyLayout
+<div class="d-flex align-items-center justify-content-center vh-100">
+    <div class="text-center">
+        <h1 class="display-1 fw-bold">404</h1>
+        <p class="fs-3"> <span class="text-danger">Упс!</span> Не знайдено!</p>
+        <p class="lead">
+            @ErrMessage
+        </p>
+        <a href="/" class="btn btn-primary">Додому</a>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string ErrMessage { get; set; }
+}

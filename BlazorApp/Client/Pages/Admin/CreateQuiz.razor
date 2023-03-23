@@ -1,0 +1,130 @@
+﻿@using BlazorApp.Models.ResponseModels.Quiz
+@using BlazorApp.Shared.Models.RequestModels.Quiz
+@using BlazorApp.Shared.Models.ResponseModels.Quiz
+@using Microsoft.AspNetCore.Authorization
+@inject HttpClient Http
+<h3>CreateQuiz</h3>
+
+<div class="card text-white bg-primary mb-3" style="max-width: 20rem;">
+  <div class="card-header">New Quiz</div>
+  <div class="card-body">
+    <h4 class="card-title">Enter name</h4>
+    <input type="text" value=""
+               @onchange="@((ChangeEventArgs e) => name = e.Value.ToString())" />
+    <p class="card-text">After adding check yor quizzes</p>
+
+    <button class="align-items-center btn btn-primary" @onclick="CreateQuizMethod">Submit</button>
+  </div>
+</div>
+
+<hr />
+<div class="card text-white bg-primary mb-3" style="max-width: 20rem;">
+  <div class="card-header">New Question</div>
+  <div class="card-body">
+    <h4 class="card-title">Enter Name</h4>
+    <input type="text" value=""
+               @onchange="@((ChangeEventArgs e) => questionText = e.Value.ToString())" />
+    <h4 class="card-title">Enter Id</h4>
+    <input type="text" value=""
+               @onchange="@((ChangeEventArgs e) => id = int.Parse(e.Value.ToString()))" />
+    <p class="card-text">After adding check yor quizzes</p>
+
+    <button class="align-items-center btn btn-primary" @onclick="CreateQuizQuestionMethod">Submit</button>
+  </div>
+</div>
+
+<hr />
+<div class="card text-white bg-primary mb-3" style="max-width: 20rem;">
+  <div class="card-header">New Answer</div>
+  <div class="card-body">
+    <h4 class="card-title">Enter answer</h4>
+    <input type="text" value=""
+               @onchange="@((ChangeEventArgs e) => answerText = e.Value.ToString())" />
+    <h4 class="card-title">Enter Id</h4>
+    <input type="text" value=""
+               @onchange="@((ChangeEventArgs e) => questionId = int.Parse(e.Value.ToString()))" />
+    <input type="checkbox" value=""
+               @onchange="@((ChangeEventArgs e) => isCorrect = bool.Parse(e.Value.ToString()))" />
+    <p class="card-text">After adding check yor quizzes</p>
+
+    <button class="align-items-center btn btn-primary" @onclick="CreateQuizAnswerMethod">Submit</button>
+  </div>
+</div>
+@if (errStr != null) 
+{
+    <p>@errStr</p>
+}
+
+
+
+
+@code {
+    QuizRequest newQuiz = new QuizRequest();
+    QuizQuestionRequest newQuestion = new QuizQuestionRequest();
+    QuizAnswerRequest newAnswer = new QuizAnswerRequest();
+
+    QuizResponse _model = null;
+    QuizQuestionResponse _questinonModel = null;
+    QuizAnswerResponse _answerModel = null;
+
+    string name;
+
+    string questionText;
+    int id;
+
+    string answerText;
+    int questionId;
+    bool isCorrect;
+
+    string errStr = null;
+    public async Task CreateQuizMethod()
+    {
+        try
+        {
+            newQuiz.Name = name;
+            newQuiz.Author = "Admin";
+            newQuiz.IsActive = true;
+
+            using var response = await Http.PostAsJsonAsync("quizadmin/", newQuiz);
+            _model = await response.Content.ReadFromJsonAsync<QuizResponse>();
+        }
+        catch (Exception ex)
+        {
+            errStr = ex.Message;
+        }
+
+    }
+    public async Task CreateQuizQuestionMethod()
+    {
+        try
+        {
+            newQuestion.Question = questionText;
+            newQuestion.QuizId = id;
+
+
+            using var response = await Http.PostAsJsonAsync("quizadmin/postQuestion", newQuestion);
+            _questinonModel = await response.Content.ReadFromJsonAsync<QuizQuestionResponse>();
+        }
+        catch (Exception ex)
+        {
+            errStr = ex.Message;
+        }
+    }
+    public async Task CreateQuizAnswerMethod()
+    {
+        try
+        {
+            newAnswer.Text = answerText;
+            newAnswer.QuestionId = questionId;
+            newAnswer.IsCorrect = isCorrect;
+
+            using var response = await Http.PostAsJsonAsync("quizadmin/postAnswer", newAnswer);
+            _answerModel = await response.Content.ReadFromJsonAsync<QuizAnswerResponse>();
+        }
+        catch (Exception ex)
+        {
+            errStr = ex.Message;
+        }
+    }
+
+}

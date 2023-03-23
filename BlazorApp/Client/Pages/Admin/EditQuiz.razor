@@ -1,0 +1,311 @@
+﻿@page "/editQuiz"
+@page "/editQuiz/{Id:int}"
+@using BlazorApp.Models.ResponseModels.Quiz
+@using BlazorApp.Models.ResponseModels.User
+@using BlazorApp.Shared.Models.RequestModels.Quiz
+@using BlazorApp.Shared.Models.ResponseModel.User
+@using BlazorApp.Shared.Models.ResponseModels.Quiz
+@using BlazorApp.Shared.Models.ResponseModels.User
+@using System.Text.Json
+@using System.Text
+@using System.IO
+@inject HttpClient Http
+@inject NavigationManager Nv
+@inject IJSRuntime JS
+@layout AdminLayout
+
+@if (_quiz != null)
+{
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Додати питання до @_quiz.Name</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body">
+                <h4 class="card-title">Введіть питання:</h4>
+                <div class="form-group">
+                  <textarea class="form-control" rows="3" @onchange="(ChangeEventArgs e) => question = e.Value.ToString()"></textarea>
+                </div>
+                <br>
+                <div class="form-group">
+                  <label for="exampleSelect1" class="form-label mt-4">Кількість відповідей</label>
+                  <select class="form-select" id="exampleSelect1" @onchange="(ChangeEventArgs e) => InitAnswers(e.Value.ToString())">
+                    <option>1</option>
+                    <option>2</option>
+                    <option>3</option>
+                    <option>4</option>
+                  </select>
+                </div>
+                <br>
+               @foreach (var item in addedAnswers)
+               {
+                   <div class="input-group mb-3">
+                        <div class="input-group-text">
+                            <input class="form-check-input mt-0" type="checkbox" @onchange="(ChangeEventArgs e) => item.IsCorrect = bool.Parse(e.Value.ToString())" aria-label="Чи вірна відповідь?" />
+                        </div>
+                        <input type="text" class="form-control" @onchange="(ChangeEventArgs e) => item.Text = e.Value.ToString()" aria-label="Введіть відповідь" />
+                   </div>
+               }
+                <br>
+            </div>
+            <div class="modal-footer">
+            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Закрити</button>
+            <button type="button" class="btn btn-primary" data-bs-dismiss="modal" @onclick="() => CreateQuestion(question)">Додати</button>
+            </div>
+        </div>
+    </div>
+</div>
+    <div class="d-inline">
+        <h3 style="margin-left:15px">@_quiz.Name<i class="@(_quiz.IsActive ? "oi oi-eye" : "")"></i></h3>
+        <br/> 
+        <button class="btn btn-primary oi oi-arrow-left" @onclick="BackToQuizzes"></button>  
+        <button class="btn btn-warning oi oi-eye" @onclick="IsActive"></button>        
+        <button class="btn btn-danger  oi oi-trash" @onclick="DeleteQuiz"></button>
+        <a href="/quizadmin/download/@Id" class="btn btn-outline-success"><i class="oi oi-cloud-download"></i></a>
+        <hr/>
+    </div>
+    
+
+<div class="accordion col" id="accordionExample">
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="headingOne">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                Питання
+            </button>
+        </h2>
+        <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample" style="">
+            <div class="accordion-body">
+                <div class="row row-cols-3">
+
+                    <div class="col">
+                        <div class="card text-white bg-success gx-4 h-100" style="max-width: 20rem;">
+                            <div class="card-header h-25"><h5 class="text-center">Нове запитання</h5></div>
+                                <button class="card-body btn btn-dark h-75" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                                    <h4 class="card-title">Створити</h4>
+                                </button>
+                        </div>
+                    </div>
+
+                    @foreach (var question in _quiz.Questions)
+                    {
+
+                        @if (question.Answers != null)
+                        {
+                            <div class="col">
+                                <div class="card text-white gx-4 h-100" >
+                                    <div class="card-header text-muted h-25">
+                                        <p><button class="btn-close" @onclick="() => DeleteQuestion(question.Id)"></button>@question.Question</p>
+                                    </div>
+                                    <div class="card-body h-75">
+                                        @foreach (var answer in question.Answers)
+                                        {
+                                            @if (answer.IsCorrect == true){<p class="text-success">@answer.Text</p><hr style="color: black">}
+                                            else{<p class="text-danger">@answer.Text</p><hr style="color: black">}
+                                        }
+                                    </div>
+                                </div> 
+                            </div>
+                                       
+                        }
+                 
+                    }
+
+                </div>
+                <br>
+            </div>
+        </div>
+    </div>
+          
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="headingThree">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+              Результати користувачей
+              </button>
+            </h2>
+            <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
+              <div class="accordion-body row row-cols-3">
+                  @foreach(var result in _quiz.UsersJoined) 
+                  {
+                        <div class="col">
+                            <div class="card text-white card h-100" style="max-width: 20rem;">
+                                <div class="card-header">
+                                   <button class="btn-close" @onclick="() => DeleteResult(result.Id)"></button>
+                                   <h3><a class="card-link" href="/userinfo/@result.UserId">@result.UserName</a></h3>
+                                </div>
+                                <div class="card-body">
+                                    @if (result.CountOfCurrentAnswers > result.CountOfIncorrectAnswers)
+                                    {
+                                        <h4 class="text-success">Результат: @result.CountOfCurrentAnswers / @_quiz.Questions.Count </h4>
+                                    }
+                                    else
+                                    {
+                                        <h4 class="text-danger">Результат: @result.CountOfCurrentAnswers / @_quiz.Questions.Count </h4>
+                                    }
+                                </div>
+                                <div class="card-footer">
+                                    <h6 class="card-subtitle text-muted">Виконано @result.JoinedAt</h6>
+                                </div>
+                            </div>  
+                        <br />
+                        </div>
+
+                  }
+                </div>
+            </div>
+          </div>
+        </div>
+        <br>
+}  
+else
+{
+    <p>Loading..</p>    
+}     
+
+
+
+
+
+
+@code {
+    [CascadingParameter]
+    public AdminLayout Layout { get; set; }
+
+    [Parameter]
+    public int Id { get; set; } = 0;
+
+    private QuizResponse _quiz { get; set; } = new QuizResponse();
+    private List<QuizAnswerRequest> addedAnswers { get; set; } = new List<QuizAnswerRequest>();
+
+    #region Aditional properties
+    string newName = "";
+    bool _showTextBox = false;
+    string errStr = "";
+    #region Create Question:Properties
+    string question = "";
+    int answersCount = 0;
+    #endregion
+    #region Create Answer: Properties
+
+    bool isCorrect = false;
+    string text = "";
+
+    #endregion
+    #endregion
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Layout.IsUserAdmin())
+        {
+            Nv.NavigateTo("/acccessdenied");
+        }
+        else
+        {
+            using var response = await Http.GetAsync($"quizadmin/getQuizById/{Id}");
+            var _model = await response.Content.ReadFromJsonAsync<QuizResponse>();
+            _quiz = _model;
+        }
+    }
+
+    private void ShowTextBox()
+    {
+        if (_showTextBox == false)
+            _showTextBox = true;
+        else 
+            _showTextBox = false;
+
+    }
+
+    private async Task EditName(string newName)
+    {
+        using var response = await Http.PutAsync($"quizadmin/changeQuizStatusById/{Id}-{newName}", null);
+        var _model = await response.Content.ReadFromJsonAsync<QuizResponse>();
+        _quiz.Name = _model.Name;
+        ShowTextBox();
+    }
+
+    private async Task BackToQuizzes()
+    {
+        Nv.NavigateTo("/myQuizzes");
+    }
+
+    private async Task DeleteQuiz()
+    {
+        await Http.DeleteAsync($"quizadmin/deleteQuizById/{Id}");
+        await BackToQuizzes();
+    }
+
+    private async Task DeleteQuestion(int id)
+    {
+        var resposne = await Http.DeleteAsync($"quizadmin/deleteQuestionById/{id}");
+        _quiz.Questions.Remove(_quiz.Questions.FirstOrDefault(x => x.Id == id));
+    }
+    private async Task DeleteResult(int id)
+    {
+        var resposne = await Http.DeleteAsync($"adminresults/{id}");
+        _quiz.UsersJoined.Remove(_quiz.UsersJoined.FirstOrDefault(x => x.Id == id));
+    }
+    private async Task CreateQuestion(string questionText)
+    {
+        var isExistQuestion = _quiz.Questions.FirstOrDefault(x => x.Question == questionText);
+
+        if (isExistQuestion == null)
+        {
+            var postQuestionBody = new QuizQuestionRequest() {Question = questionText, QuizId = Id};
+            using var response = await Http.PostAsJsonAsync("quizadmin/postQuestion/", postQuestionBody);
+            var _model = await response.Content.ReadFromJsonAsync<QuizQuestionResponse>();
+
+            if (addedAnswers != null)
+            {
+                foreach (var answer in addedAnswers)
+                {
+                    answer.QuestionId = _model.Id;
+                    using var answerResponse = await Http.PostAsJsonAsync("quizadmin/postAnswer/", answer);
+                    var _answerModel = await answerResponse.Content.ReadFromJsonAsync<QuizAnswerResponse>();
+                    _model.Answers.Add(_answerModel);
+                }    
+            }
+            _quiz.Questions.Add(_model);
+        }
+        addedAnswers.Clear();
+
+
+    }
+    public async Task IsActive()
+    {
+        using var response = await Http.PatchAsync($"quizadmin/changeQuizStatusById/{Id}", null);
+        var _model = await response.Content.ReadFromJsonAsync<QuizResponse>();
+        _quiz.IsActive = _model.IsActive;
+    }
+    public async Task InitAnswers(string asnwerStrCount)
+    {
+        answersCount = int.Parse(asnwerStrCount);
+        if (addedAnswers.Count != 0)
+        {
+            if (answersCount > addedAnswers.Count)
+            {
+                while (addedAnswers.Count != answersCount)
+                {
+                    addedAnswers.Add(new QuizAnswerRequest());
+                }
+            }
+            else if (answersCount < addedAnswers.Count)
+            {
+                while (addedAnswers.Count != answersCount)
+                {
+                    addedAnswers.Remove(addedAnswers.Last());
+                }
+            }
+
+        }
+        else
+        {
+            for (int i = 0; i < answersCount; i++)
+            {
+                addedAnswers.Add(new QuizAnswerRequest());
+            } 
+        }
+    }
+
+}

@@ -1,0 +1,59 @@
+﻿@page "/results"
+@using BlazorApp.Shared.Models.ResponseModel.User
+@inject HttpClient Http
+@inject NavigationManager Nv
+@if (_results.Count == 0)
+{
+    <div class="d-flex align-items-center justify-content-center vh-100">
+        <div class="text-center">
+            <p class="fs-3"> <span class="text-danger">Упс!</span> Не знайдено :(</p>
+            <p class="lead">
+                Ви поки що не пройшли жодного тесту. Пройдіть тест та повертайтесь сюди
+            </p>
+        </div>
+    </div>
+}
+<div class="py-5">
+    <div class="container">
+        <div class="row hidden-md-up">
+            @foreach (var item in _results)
+            {
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-block">
+                            <h4 class="card-title">@item.QuizName</h4>
+                            <p class="card-text p-y-1 @(item.CountOfCorrectAnswers >= item.CountOfIncorrectAnswers ? "text-success" : "text-danger")"><strong>Результат: @item.CountOfCorrectAnswers / @(item.CountOfIncorrectAnswers + item.CountOfCorrectAnswers)</strong></p>
+                            <a class="card-link" @onclick='() => GoToQuiz(item.QuizId)'>Перепройти</a>
+                            <a class="card-link" @onclick="() => DeleteResult(item.Id)">Видалити</a>
+                        </div>
+                        <div class="card-footer">
+                            <h6 class="card-subtitle text-muted">Виконано @item.JoinedAt</h6>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div><br>
+    </div>
+</div>
+@code {
+    private List<SmallUserResultResponse> _results { get; set; } = new List<SmallUserResultResponse>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var resposne = await Http.GetAsync($"profile/getAllResults");
+        var model = await resposne.Content.ReadFromJsonAsync<IEnumerable<SmallUserResultResponse>>();
+        _results = model.ToList();
+    }
+
+    public async Task DeleteResult(int resultId)
+    {
+        await Http.DeleteAsync($"profile/deleteResult/{resultId}");
+        _results.Remove(_results.FirstOrDefault(x => x.Id == resultId));
+        StateHasChanged();
+    }
+
+    public async Task GoToQuiz(int id)
+    {
+        Nv.NavigateTo($"passQuiz/{id.ToString()}");
+    }
+}

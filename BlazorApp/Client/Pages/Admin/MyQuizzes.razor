@@ -1,0 +1,273 @@
+﻿@page "/myQuizzes"
+@using BlazorApp.Client.Shared.Pagination
+@using BlazorApp.Shared.Models.RequestModels.Quiz
+@using BlazorApp.Shared.Models.ResponseModel.Quiz
+@using BlazorApp.Shared.Models.ResponseModel.Session
+@using BlazorApp.Shared.Models.ResponseModels.Quiz
+@using System.Text.Json
+@using System.Text.Json.Serialization;
+@using Microsoft.AspNetCore.Authorization
+@inject HttpClient Http
+@inject NavigationManager Nv
+@layout AdminLayout
+@inject IJSRuntime JS
+
+
+    @if (_allQuizzes != null)
+    {
+        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Створити тест</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h4 class="card-title">Введіть назву:</h4>
+                       <div class="form-group">
+                          <input type="text" class="form-control" @onchange="(ChangeEventArgs e) => name = e.Value.ToString()">
+                       </div>
+                        <div class="form-group">
+                          <label for="exampleSelect1" class="form-label mt-4">Виберіть тему:</label>
+                            <select class="form-select" id="exampleSelect1" @onchange="(ChangeEventArgs e) => GetTopic(e.Value.ToString())">
+                            @foreach (var item in _topics)
+                            {
+                                <option>@item.Name</option>
+                            }   
+                            <option>Ввести свою тему...</option>
+                            </select>
+                        @if (_showTxtBox) 
+                        { 
+                            <div class="form-group">
+                              <label class="col-form-label mt-4" for="inputDefault">Введіть тему:</label>
+                              <input type="text" class="form-control" placeholder="Default input" id="inputDefault" @onchange="(ChangeEventArgs e) => _topic = e.Value.ToString()">
+                            </div> 
+                        }
+                    </div>
+                    </div>
+                    <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрити</button>
+                    <button type="button" class="btn btn-primary" @onclick="CreateQuizMethod" data-bs-dismiss="modal">Створити</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-success oi oi-plus" data-bs-toggle="modal" data-bs-target="#exampleModal"> </button>
+        <button @onclick="RefreshTable" class="btn btn-datatable oi oi-reload"> </button>
+        <div class="container h-100">
+            <div class="d-flex align-items-center justify-content-center h-100">
+                <div class="d-flex flex-column">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" placeholder="Пошук..." @onkeydown="@Enter" @onchange="(ChangeEventArgs e) => _filter = e.Value.ToString()">
+                        <button class="btn btn-sm btn-outline-primary" type="button" @onclick="Search">Пошук</button>
+                        @if (_filter != String.Empty)
+                        {
+                            <button class="btn-close" type="button" @onclick="CleanFilters" style="margin-right: 15px"></button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Id</th>
+          <th scope="col">Назва</th>
+          <th scope="col">Тема</th>
+          <th scope="col">Кількість питань</th>
+          <th scope="col">Статус</th>
+          <th scope="col">Налаштування</th>
+        </tr>
+      </thead>
+      <tbody class="table-group-divider">
+         @foreach (var item in _quizzesPerPage)
+         {
+             <tr>
+                <th scope="col">@item.Id</th>
+                <th scope="col"><a href="/editQuiz/@item.Id">@item.Name</a></th>
+                <th scope="col">@item.Topic</th>
+                <th scope="col">@item.QuestionsCount</th>
+                @if (@item.IsActive == true)
+                {
+                <th scope="col">[Активний]</th>
+                }
+                else
+                {
+                <th scope="col">[Не активний]</th>
+                }
+                <th scope="col"><button class="btn btn-primary oi oi-pencil" style="margin-left:25px" @onclick="() => EditQuiz(item.Id)"></button><button class="btn btn-danger oi oi-trash" style="margin-left:5px" @onclick="() => DeleteQuiz(item.Id)"></button></th>
+             </tr>
+         }
+      </tbody>
+      <tfoot>
+        <Pagination TotalPages="@(_totalPages != 0 ? _totalPages : 1)"
+                    PageIndex="@State.PageIndex"
+                    Radius="3"
+                    OnSelectedPage="@SelectedPage">
+        </Pagination>
+      </tfoot>
+    </table>
+    }
+    else{<p>Loading...</p>}
+
+
+
+
+
+@code {
+    [CascadingParameter]
+    public AdminLayout Layout{ get; set; }
+
+    [CascadingParameter]
+    public PageIndexStateProvider State { get; set; }
+
+    private List<TopicResponse> _topics = null;
+    private List<SmallQuizResponse> _allQuizzes = null;
+    private List<SmallQuizResponse> _quizzesPerPage = new List<SmallQuizResponse>();
+
+    #region additional props
+
+    string name;
+    private string? _topic;
+
+    private bool _showTxtBox;
+    private string json { get; set; }
+    string errStr = String.Empty;
+
+    bool _showQuizModal = false;
+    private string _filter = String.Empty;
+
+    private int _itemsPerPage = 10;
+    private int _totalPages = 1;
+    #endregion
+    private void SelectedPage(int selectedPageIndex)
+    {
+        if (_allQuizzes != null)
+        {
+            State.PageIndex = selectedPageIndex;
+            var skipcount = _itemsPerPage * (State.PageIndex - 1);
+            _quizzesPerPage = _allQuizzes.Skip(skipcount).Take(_itemsPerPage).ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Layout.IsUserAdmin())
+        {
+            Nv.NavigateTo("/accessdenied");
+        }
+        else
+        {
+            _topics = new List<TopicResponse>();
+            await RefreshTable();
+            await RefreshTopics();
+        }
+    }
+
+    public async Task RefreshPagination()
+    {
+        if (_allQuizzes != null)
+        {
+            // Initialize the number of "totalPages"
+            _totalPages = (int)Math.Ceiling(double.Parse(_allQuizzes.Count.ToString()) / _itemsPerPage);
+
+            // Initialize the "item" which will be displayed when the page loaded first time.
+            var skipcount = _itemsPerPage * (State.PageIndex - 1);
+            _quizzesPerPage = _allQuizzes.Skip(_itemsPerPage * (State.PageIndex - 1)).Take(_itemsPerPage).ToList();
+
+        }
+    }
+
+    public async Task SetFilteredPagination()
+    {
+        State.PageIndex = 1;
+        _totalPages = (int)Math.Ceiling(double.Parse(_quizzesPerPage.Count.ToString()) / _itemsPerPage);
+    }
+
+    public async Task Search()
+    {
+        var filteredList = _allQuizzes.FindAll(x => x.Topic.Contains(_filter, StringComparison.OrdinalIgnoreCase));
+        _quizzesPerPage = filteredList.Take(_itemsPerPage).ToList();
+        await SetFilteredPagination();   
+    }
+
+    public async Task CleanFilters()
+    {
+        _filter = String.Empty;
+        await RefreshPagination();
+    }
+
+    public async Task CreateQuizMethod()
+    {
+        try
+        {
+            var postBody = new QuizRequest() {Name=name, Author = "Admin", IsActive = true, Topic = _topic };
+            using var response = await Http.PostAsJsonAsync("quizadmin", postBody);
+            var _model = await response.Content.ReadFromJsonAsync<QuizResponse>();
+
+            await RefreshTable();
+        }
+        catch (Exception ex)
+        {
+            errStr = ex.Message;
+        }
+
+    }
+
+    public async Task RefreshTopics()
+    {
+        using var resposne = await Http.GetAsync($"topics/");
+        var topics = await resposne.Content.ReadFromJsonAsync<IEnumerable<TopicResponse>>();
+        _topics = topics.ToList();
+    }
+
+    public async Task RefreshTable()
+    {
+        using var resposne = await Http.GetAsync($"quizadmin/getAllSmallQuizzes/");
+        var quizzes = await resposne.Content.ReadFromJsonAsync<IEnumerable<SmallQuizResponse>>();
+        _allQuizzes = quizzes.ToList();
+        await RefreshPagination();
+    }
+
+    public async Task GetTopic(string topic)
+    {
+        if (topic == "Ввести свою тему...")
+        {
+            _showTxtBox = true;
+        }
+        else
+        {
+            _topic = topic;
+            _showTxtBox = false;
+        }
+    }
+
+    public async Task EditQuiz(int id)
+    {
+        Nv.NavigateTo($"/editQuiz/{id}");
+    }
+
+    public async Task DeleteQuiz(int id)
+    {
+        await Http.DeleteAsync($"quizadmin/deleteQuizById/{id}");
+        await RefreshTable();
+    }
+
+    public async Task DeleteTopic(int id)
+    {
+        await Http.DeleteAsync($"admintopics/{id}");
+        await RefreshTopics();
+    }
+
+
+    private async Task Enter(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+        {
+            await Search();
+        }
+
+    }
+}

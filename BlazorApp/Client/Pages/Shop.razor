@@ -1,0 +1,68 @@
+﻿@page "/shop"
+@using BlazorApp.Shared
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<div>
+    <h3>shop</h3>
+
+    <div>
+        <BlazorApp.Client.Components.ToolTip Text="Buy all items in cart">
+            <button>Buy all</button>
+        </BlazorApp.Client.Components.ToolTip>
+    </div>
+
+    @if (_shopCart)
+    {
+        <div>
+            <button @onclick="() => SwitchCart()">Show items</button>
+
+            <button>Delete</button>
+
+        </div>
+    }
+    else
+    {
+        <div>
+            <button @onclick="() => SwitchCart()">Show cart</button>
+
+        </div>
+    }
+</div>
+
+
+
+@code {
+    private bool _shopCart;
+    private List<string> _errors;
+
+    public async Task GetAll()
+    {
+
+    }
+
+    public async Task GetCart()
+    {
+
+    }
+
+
+    public async Task SwitchCart() => _shopCart = !_shopCart;
+
+    public async Task Buy()
+    {
+
+    }
+
+    public async Task Remove()
+    {
+
+    }
+
+    private void _createError(string text)
+    {
+        if (_errors == null) _errors = new List<string>();
+
+        _errors.Add(text);
+    }
+}

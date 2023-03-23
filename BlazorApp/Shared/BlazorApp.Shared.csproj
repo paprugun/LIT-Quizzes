@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="ResponseModels\**" />
+    <EmbeddedResource Remove="ResponseModels\**" />
+    <None Remove="ResponseModels\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Newtonsoft.Json" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Models\RequestModels\User\Account\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\BlazorApp.Common\BlazorApp.Common.csproj" />
+  </ItemGroup>
+</Project>

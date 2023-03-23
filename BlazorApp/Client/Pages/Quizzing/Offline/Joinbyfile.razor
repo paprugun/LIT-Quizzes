@@ -1,0 +1,154 @@
+﻿@using BlazorApp.Common.Utilities.Interfaces
+@using BlazorApp.Shared.Models.ResponseModels.Quiz
+@using Microsoft.AspNetCore.Http
+@using System.Text.Json
+@inject NavigationManager Nv
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+@page "/joinoffline"
+<style>
+.body{
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+.file-drop-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 450px;
+  height: 300px;
+  max-width: 100%;
+  padding: 25px;
+  border: 1px dashed rgba(255, 255, 255, 0.4);
+  border-radius: 3px;
+  transition: 0.2s;
+ 
+}
+
+.choose-file-button {
+  flex-shrink: 0;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  padding: 8px 15px;
+  margin-right: 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.file-message {
+  font-size: small;
+  font-weight: 300;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-input {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  cursor: pointer;
+  opacity: 0;
+  
+}
+
+.mt-100{
+    margin-top:100px;
+}
+.hover {
+    border-style: solid;
+    background-color: lightgrey;
+}
+.file-container {
+    display: flex;
+    justify-content: center;
+}
+.image-container img {
+    width: 50%;
+}
+::deep input[type=file] {
+    width: 100%;
+    padding: 20px;
+}
+
+</style>
+<div class="container d-flex justify-content-center mt-100">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="text-center">Завантажте тест</h2>
+            <p class="text-center">Завантажте файл формату JSON та пройдіть тестування локально</p>
+            <div class="file-drop-area @HoverClass" @ref="_fileDropContainer" @ondragenter="OnDragEnter" @ondragleave="OnDragLeave" @ondragover="OnDragEnter">
+              <InputFile OnChange="@OnInputFileChange" @ref="_file" class="choose-file-button">Виберіть файл</InputFile>
+              <span class="file-message">або перетяніть його сюди</span>
+              <InputFile class="file-input" OnChange="@OnInputFileChange" @ref="_file"/>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+@code {
+    IJSObjectReference _filePasteModule;
+    IJSObjectReference _filePasteFunctionReference;
+
+    ElementReference _fileDropContainer;
+    private QuizResponse _quiz;
+    private string ErrorMessage;
+    private InputFile _file;
+
+    private string HoverClass;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _filePasteModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/FilePaste.js");
+            _filePasteFunctionReference = await _filePasteModule.InvokeAsync<IJSObjectReference>("initializeFilePaste", _fileDropContainer, _file);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_filePasteFunctionReference != null)
+        {
+            await _filePasteFunctionReference.InvokeVoidAsync("dispose");
+            await _filePasteFunctionReference.DisposeAsync();
+        }
+        if (_filePasteModule != null)
+        {
+            await _filePasteModule.DisposeAsync();
+        }
+    }   
+
+    void OnDragEnter(DragEventArgs e) => HoverClass = "hover";
+    void OnDragLeave(DragEventArgs e) => HoverClass = string.Empty;
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        using var content = new MultipartFormDataContent();
+        var file = e.GetMultipleFiles().FirstOrDefault();
+        var fileContent = new StreamContent(file.OpenReadStream(long.MaxValue));
+        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+
+        content.Add
+        (
+            content: fileContent,
+            name: "\"files\"",
+            fileName: file.Name
+        );
+
+        string json = await content.FirstOrDefault().ReadAsStringAsync();
+        await JS.InvokeVoidAsync("localStorage.setItem", "quiz", json);
+
+        Nv.NavigateTo("/passoffline");
+    }
+
+}

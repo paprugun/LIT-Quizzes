@@ -1,0 +1,143 @@
+﻿@page "/quiztopics"
+@using BlazorApp.Client.Shared.Pagination
+@using BlazorApp.Shared.Models.ResponseModel.Quiz
+@inject HttpClient Http
+@layout AdminLayout
+@inject NavigationManager Nv
+
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Створити тему</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h4 class="card-title">Введіть назву:</h4>
+                       <div class="form-group">
+                          <input type="text" class="form-control" @onchange="(ChangeEventArgs e) => _topicRequest = e.Value.ToString()">
+                       </div>
+                        <div class="form-group">
+                    </div>
+                    </div>
+                    <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрити</button>
+                    <button type="button" class="btn btn-primary" @onclick="CreateTopic" data-bs-dismiss="modal">Створити</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<button class="btn btn-success oi oi-plus" data-bs-toggle="modal" data-bs-target="#exampleModal"> </button>
+
+<table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Id</th>
+          <th scope="col">Назва</th>
+          <th scope="col">Налаштування</th>
+        </tr>
+      </thead>
+      <tbody class="table-group-divider">
+         @foreach (var item in _topicsPerPage)
+         {
+             <tr>
+                <th scope="col">@item.Id</th>
+                <th scope="col">@item.Name</th>
+                <th scope="col"><button class="btn btn-danger oi oi-trash" style="margin-left:5px" @onclick="() => DeleteTopic(item.Id)"></button></th>
+             </tr>
+         }
+      </tbody>
+      <tfoot>
+        <Pagination TotalPages="@(_totalPages != 0 ? _totalPages : 1)"
+                    PageIndex="@State.PageIndex"
+                    Radius="3"
+                    OnSelectedPage="@SelectedPage">
+        </Pagination>
+      </tfoot>
+    </table>
+@code {
+    [CascadingParameter]
+    public AdminLayout Layout { get; set; }
+
+    [CascadingParameter]
+    public PageIndexStateProvider State { get; set; }
+
+    private List<TopicResponse> _topics;
+    private List<TopicResponse> _topicsPerPage = new List<TopicResponse>();
+    private string _topicRequest;
+
+    #region Additional properties
+    private string _filter = String.Empty;
+
+    private int _itemsPerPage = 10;
+    private int _totalPages = 1;
+    #endregion
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Layout.IsUserAdmin())
+        {
+            Nv.NavigateTo("/accessdenied");
+        }
+        else
+        {
+            using var resposne = await Http.GetAsync($"topics/");
+            var topics = await resposne.Content.ReadFromJsonAsync<IEnumerable<TopicResponse>>();
+            _topics = topics.ToList();
+            await RefreshPagination(); 
+        }
+        
+    }
+
+    private void SelectedPage(int selectedPageIndex)
+    {
+        if (_topics != null)
+        {
+            State.PageIndex = selectedPageIndex;
+            var skipcount = _itemsPerPage * (State.PageIndex - 1);
+            _topicsPerPage = _topics.Skip(skipcount).Take(_itemsPerPage).ToList();
+        }
+    }
+
+    private async Task RefreshPagination()
+    {
+        if (_topics != null)
+        {
+            // Initialize the number of "totalPages"
+            _totalPages = (int)Math.Ceiling(double.Parse(_topics.Count.ToString()) / _itemsPerPage);
+
+            // Initialize the "item" which will be displayed when the page loaded first time.
+            var skipcount = _itemsPerPage * (State.PageIndex - 1);
+            _topicsPerPage = _topics.Skip(skipcount).Take(_itemsPerPage).ToList();
+
+        }
+    }
+
+    private async Task SetFilteredPagination()
+    {
+        State.PageIndex = 1;
+        _totalPages = (int)Math.Ceiling(double.Parse(_topicsPerPage.Count.ToString()) / _itemsPerPage);
+    }
+
+    private async Task Search()
+    {
+        var filteredList = _topics.FindAll(x => x.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase));
+        _topicsPerPage = filteredList.Take(_itemsPerPage).ToList();
+        await SetFilteredPagination();   
+    }
+
+    private async Task DeleteTopic(int id)
+    {
+        await Http.DeleteAsync($"admintopics/{id}");
+        _topics.Remove(_topics.FirstOrDefault(x => x.Id == id));
+        await RefreshPagination();
+    }
+
+    private async Task CreateTopic()
+    {
+        using var response = await Http.GetAsync($"admintopics/{_topicRequest}");
+        var topic = await response.Content.ReadFromJsonAsync<TopicResponse>();
+        _topics.Add(topic);
+        await RefreshPagination();
+    }
+}

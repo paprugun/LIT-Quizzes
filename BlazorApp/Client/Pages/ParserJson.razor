@@ -1,0 +1,53 @@
+﻿@page "/parserjson"
+@using BlazorApp.Shared
+@inject HttpClient Http
+
+<h1>I am parser</h1>
+
+<div>
+    @if (isLoaded)
+    {
+        <p>
+            Id: @NoteModel.Id <br>
+            UserId: @NoteModel.UserId <br>
+            Title: @NoteModel.Title <br>
+            Completed: @NoteModel.Completed.ToString()
+        </p>
+
+    }
+    else
+    {
+        <button class="btn-danger" @onclick="ParseJsonMethod">click</button>
+}
+</div>
+
+<div>
+    @if (state)
+    {
+        <button class="btn-warning" @onclick="Switch">set false</button>
+    }
+    else
+    {
+        <button class="btn-success" @onclick="Switch">set true</button>
+    }
+</div>
+
+
+@code{
+    private NoteModel NoteModel = new NoteModel();
+
+    private bool isLoaded = false;
+    private bool state = false;
+
+    private async Task ParseJsonMethod()
+    {
+        NoteModel = await Http.GetFromJsonAsync<NoteModel>("WeatherForecast/jsonExample");
+        isLoaded = true;
+    }
+
+    private async Task Switch()
+    {
+        state = !state;
+    }
+
+}

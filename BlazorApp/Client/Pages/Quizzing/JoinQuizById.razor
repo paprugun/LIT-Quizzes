@@ -1,0 +1,95 @@
+﻿@page "/joinQuiz"
+@page "/joinQuiz/{Id:int}"
+@using BlazorApp.Shared.Models.RequestModels.Quiz
+@using BlazorApp.Shared.Models.RequestModels.User
+@using BlazorApp.Shared.Models.ResponseModel.Session
+@using BlazorApp.Shared.Models.ResponseModel.User
+@using BlazorApp.Shared.Models.ResponseModels.Quiz
+@using BlazorApp.Shared.Models.ResponseModels.User
+@using Microsoft.AspNetCore.Authorization
+@using System.Text.Json
+@inject HttpClient Http
+@inject NavigationManager Nv
+@layout EmptyLayout 
+@inject IJSRuntime JS
+
+<button @onclick="Back" class="btn btn-outline-dark oi oi-arrow-left"></button>
+<br/>
+@if (_exception)
+{
+    <div class="alert alert-dismissible alert-danger">
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      <strong>Ой!</strong> Некоректний код. @_errorStr;
+    </div>
+}
+
+    <div class="container-fluid d-flex justify-content-center align-items-center" style="height:100vh; overflow:hidden;">
+
+        <div class="row text-center d-flex align-items-center" style="overflow:hidden; width:50vw; height:50vh;">
+            <div class="container-fluid d-flex justify-content-center" style="height:100vh; overflow:hidden;">
+                <div class="p-3 text-center py-4">
+                    <h4>Під`єднатися до тесту</h4>
+                    <div class="mt-4 px-4">
+                        <input class="form-control" placeholder="Код тесту" @onchange="(ChangeEventArgs e) => Id = int.Parse(e.Value.ToString())"></input>
+                    </div>
+                    <div class="mt-4 d-grid px-4">
+                        <button class="btn btn-success btn-block text-uppercase" @onclick="JoinQuiz">
+                            <span>Під`єднатися</span>
+                        </button>
+                    </div>
+                <a href="joinoffline" style="margin-top:20px;">Або якщо ви маєте JSON файл тесту, то можете пройти тестування локально</a>
+                </div>
+            </div> 
+        </div> 
+    </div> 
+
+@code  
+{
+
+    [Parameter]
+    public int Id { get; set; } = 1;
+    private UserRoleResponse _user = null;
+
+    #region Additional properties
+    private string _errorStr = String.Empty;
+    private string? json;
+    private bool _exception { get; set; }
+    #endregion
+
+    private async Task JoinQuiz()
+    {
+        _user = await GetUser();
+        if (_user == null)
+        {
+            Nv.NavigateTo("/unauthorized");
+        }
+        if (Id > 0)
+        {
+            Nv.NavigateTo($"/passQuiz/{Id}");
+        }
+        else
+        {
+            _exception = true; 
+            _errorStr = Id.ToString();
+            
+        }
+       
+    }
+
+    private async Task<UserRoleResponse?> GetUser()
+	{
+		json = await JS.InvokeAsync<string>("localStorage.getItem", "user");
+		if (json != null)
+		{
+			_user = JsonSerializer.Deserialize<UserRoleResponse>(json);
+			return _user;
+		}
+		return null;
+
+	}
+
+    private async Task Back()
+    {
+        Nv.NavigateTo("/");
+    }
+}

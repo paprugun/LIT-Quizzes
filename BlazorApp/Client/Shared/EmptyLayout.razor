@@ -1,0 +1,30 @@
+﻿@using BlazorApp.Common.Exceptions
+@using BlazorApp.Shared.Models.ResponseModel.Session
+@using System.Text.Json
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
+@inject NavigationManager Nv
+
+<CascadingValue Value="this">
+<div class="page">
+    <div class="main">
+        @*Application level state provider*@
+        <BlazorApp.Client.Shared.Pagination.PageIndexStateProvider>
+            <div class="content px-4">
+                @Body
+            </div>
+        </BlazorApp.Client.Shared.Pagination.PageIndexStateProvider>
+
+    </div>
+</div>
+</CascadingValue>
+
+@code {
+    [CascadingParameter]
+	public Error Error { get; set; }
+
+    public void Procces(Exception ex)
+	{
+		Error.ProcessError(ex);
+	}
+}

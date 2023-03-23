@@ -1,0 +1,66 @@
+﻿@page "/userinfo/{Id:int}"
+@using BlazorApp.Shared.Models.ResponseModel.Session
+@inject HttpClient Http
+@inject NavigationManager Nv
+@layout AdminLayout
+<h2>Ім`я</h2>
+<h3><strong>@_user.FirstName</strong></h3>
+
+<h2>Прізвище</h2>
+<h3><strong>@_user.LastName</strong></h3>
+
+<h2>Пошта</h2>
+<h3><strong>@_user.Email</strong></h3>
+
+<h2>Роль</h2>
+<h3><strong>@_user.Role</strong></h3>
+
+<button type="button" class="btn btn-danger">Видалити користувача</button>
+
+@if (_user.Role != "Admin")
+{
+    <button type="button" class="btn btn-info" @onclick="GiveAdmin">Зробити адміном</button>
+}
+else
+{
+    <button type="button" class="btn btn-light" @onclick="GiveUser">Зробити користувачем</button>
+}
+
+@code {
+    [CascadingParameter]
+    public AdminLayout Layout { get; set; }
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private UserRoleResponse _user = new UserRoleResponse();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Layout.IsUserAdmin())
+        {
+            Nv.NavigateTo("/accessdenied");
+        }
+        else
+        {
+            var resposne = await Http.GetAsync($"adminusers/info/{Id}");
+            var user = await resposne.Content.ReadFromJsonAsync<UserRoleResponse>();
+            _user = user;   
+        }
+        
+    }
+
+    public async Task GiveAdmin()
+    {
+        using var response = await Http.GetAsync($"adminusers/setrole/{Id}-Admin");
+        if(response.StatusCode == System.Net.HttpStatusCode.OK)
+            _user.Role = "Admin";
+    }
+
+    public async Task GiveUser()
+    {
+        using var response = await Http.GetAsync($"adminusers/setrole/{Id}-User");
+        if(response.StatusCode == System.Net.HttpStatusCode.OK)
+            _user.Role = "User";
+    }
+}

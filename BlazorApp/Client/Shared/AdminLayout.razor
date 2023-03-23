@@ -1,0 +1,64 @@
+﻿@using BlazorApp.Common.Exceptions
+@using BlazorApp.Shared.Models.RequestModels.User
+@using BlazorApp.Shared.Models.ResponseModel.Session
+@using System.Text.Json
+@using BlazorApp.Shared.Models.ResponseModel.User
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager Nv
+<CascadingValue Value="this">
+<div class="page">
+    <div class="sidebar">
+        <AdminNavBar></AdminNavBar>
+    </div>
+
+    <div class="main">
+        <div class="top-row px-4">
+        </div>
+
+        @*Application level state provider*@
+        <BlazorApp.Client.Shared.Pagination.PageIndexStateProvider>
+            <div class="content px-4">
+                @Body
+            </div>
+        </BlazorApp.Client.Shared.Pagination.PageIndexStateProvider>
+
+    </div>
+</div>
+</CascadingValue>
+@code {
+    private UserRoleResponse _user = null;
+    private string? json;
+
+    public async Task<UserRoleResponse?> GetUser()
+    {
+        json = await JS.InvokeAsync<string>("localStorage.getItem", "user");
+        if (json != null)
+        {
+            _user = JsonSerializer.Deserialize<UserRoleResponse>(json);
+            return _user;
+        }
+        return null;
+
+    }
+
+    public async Task<bool> IsUserAdmin()
+    {
+        _user = await GetUser();
+        if (_user == null)
+            return false;
+        if (_user.Role != "Admin")
+            return false;
+        return true;
+    }
+
+    public async Task Logout()
+	{
+		_user = null;
+		await Http.GetAsync($"account/logout");
+		await JS.InvokeVoidAsync("localStorage.removeItem", "user");
+		Nv.NavigateTo("/");
+		StateHasChanged();
+	}
+}

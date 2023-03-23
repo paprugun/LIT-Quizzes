@@ -1,0 +1,79 @@
+﻿@inject IJSRuntime JS
+@page "/resultpageoffline"
+@using System.Text.Json
+@using BlazorApp.Shared.Models.RequestModels.User
+@using BlazorApp.Shared.Models.ResponseModels.Quiz
+@using BlazorApp.Shared.Models.ResponseModels.User
+@inject NavigationManager Nv
+@if (_quiz != null && _response != null)
+{
+    <button @onclick='() => Nv.NavigateTo("/")' class="btn btn-outline-dark oi oi-arrow-left"></button>
+    <br/>
+    <h2> @_quiz.Name</h2>
+    <br />
+    <div class="d-inline">
+        <h3> Результат: </h3>
+        @if (_response.CorrectAnswersCount >= _response.InCorrectAnswersCount)
+        {
+            <h4><strong class="text-success"> @_response.CorrectAnswersCount / @_questionsCount</strong></h4>
+        }
+        else
+        {
+            <h4><strong class="text-danger"> @_response.CorrectAnswersCount / @_questionsCount</strong></h4>
+        }
+    </div>
+
+    <br />
+    <h5 class="text-center"> Вірні відповіді, перевір себе:</h5>
+    <hr />
+    <div class="container">
+        @foreach (var question in _quiz.Questions)
+        {
+            <h4>@question.Question</h4>
+            @foreach (var answer in question.Answers)
+            {
+                if (answer.IsCorrect)
+                {
+                    <p class="text-success">@answer.Text</p>
+                }
+                else 
+                {
+                    <p class="text-danger">@answer.Text</p> 
+                }
+            }
+            <hr />
+        }
+    </div>
+}
+
+@code {
+    private PassQuizResponseModel _response;
+
+    private QuizResponse _quiz;
+    private int _questionsCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _response = new PassQuizResponseModel();
+        var request = JsonSerializer.Deserialize<PassQuizRequestModel>(await JS.InvokeAsync<string>("localStorage.getItem", "pass quiz request"));
+        _quiz = JsonSerializer.Deserialize<QuizResponse>(await JS.InvokeAsync<string>("localStorage.getItem", "quiz"));
+
+        _questionsCount = _quiz.Questions.Count;
+
+        foreach (var question in _quiz.Questions)
+        {
+            var usersCorrectAnswers = request.UserAnswers.FindAll(x => x.QuestionId == question.Id && x.IsCorrect);
+            var correctAnswers = question.Answers.FindAll(x => x.IsCorrect).ToList();
+            if (usersCorrectAnswers.Count == correctAnswers.Count)
+                _response.CorrectAnswersCount++;
+            else
+                _response.InCorrectAnswersCount++;
+
+        }
+
+        _response.FinalMark = _response.CorrectAnswersCount / _quiz.Questions.Count;
+
+        await JS.InvokeVoidAsync("localStorage.removeItem", "pass quiz request");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "quiz");
+    }
+}

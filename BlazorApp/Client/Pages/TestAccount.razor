@@ -1,0 +1,181 @@
+﻿@page "/testAccount"
+@using BlazorApp.Common.Extensions
+@using BlazorApp.Shared
+@inject HttpClient Http
+@inject IJSRuntime JS
+@using System.Text.Json
+@using System.Text.Json.Serialization;
+@using BlazorApp.Shared.Models.RequestModels.User
+@using BlazorApp.Shared.Models.ResponseModel.Session
+@using BlazorApp.Shared.Models.ResponseModel.User
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Http
+
+<h1>Account</h1>
+
+@if (errorString != null)
+{
+    <div class="alert alert-dismissible alert-danger">
+        <button type="button" class="btn-close" @onclick="CloseError"></button>
+        <strong>@errorString</strong>
+    </div>
+
+      <div>
+        <p>Result: @errorString</p>
+
+        <button class="btn-danger" @onclick="Logout">Logout</button>
+    </div>
+
+}
+else
+{
+    <p>Registration</p>
+    <div> 
+        <p>
+            Email:
+            <input type="email" value=""
+                   @onchange="@((ChangeEventArgs e) => email = e.Value.ToString())" />
+        </p>
+        <p>
+            Password:
+            <input type="text" value=""
+                   @onchange="@((ChangeEventArgs e) => password = e.Value.ToString())" />
+
+                   Confirm password:
+            <input type="text" value=""
+                   @onchange="@((ChangeEventArgs e) => confirmPassword = e.Value.ToString())" />
+                   <input type="checkbox" @onchange="() => _isAdminReg = !_isAdminReg">
+                   isAdmin: @_isAdminReg;
+        </p>
+
+        <button class="btn-success" @onclick="Register">Register</button>
+        <button class="btn-success" @onclick="RegisterAdmin">Admin Registration</button>
+
+
+    </div>
+    <hr>
+    <div class="card text-white bg-primary mb-3" style="max-width: 20rem;">
+      <div class="card-header">Login</div>
+      <div class="card-body">
+        <h4 class="card-title">Enter Email</h4>
+        <input type="text" value=""
+                   @onchange="@((ChangeEventArgs e) => email = e.Value.ToString())" />
+        <h4 class="card-title">Enter Password</h4>
+        <input type="text" value=""
+                   @onchange="@((ChangeEventArgs e) => password = e.Value.ToString())" />
+
+        <button class="align-items-center btn btn-primary" @onclick="Login">Submit</button>
+        <button class="align-items-center btn btn-primary" @onclick="LoginAdmin">Admin Login</button>
+
+      </div>
+    </div>}
+
+   
+
+  
+
+
+
+@code {
+    RegistrationResponse user = null;
+    LoginResponse loginModel = null;
+    string name = null;
+    string email = null;
+    string password = null;
+    string confirmPassword = null;
+    string errorString = null;
+    bool _isAdminReg = false;
+
+    private async Task Register()
+    {
+        var postBody = new RegistrationRequest() {Email = email, Password = password, ConfirmPassword = confirmPassword};
+        using var response = await Http.PostAsJsonAsync("account/register", postBody);
+        var _model = await response.Content.ReadFromJsonAsync<RegistrationResponse>();
+        user = _model;
+
+
+        errorString = user.Email;
+        email = null;
+        password = null;
+        confirmPassword = null;
+    }
+    private async Task RegisterAdmin()
+    {
+        var postBody = new RegistrationRequest() {Email = email, Password = password, ConfirmPassword = confirmPassword, isAdmin = true};
+        using var response = await Http.PostAsJsonAsync("account/registerAdmin", postBody);
+        var _model = await response.Content.ReadFromJsonAsync<RegistrationResponse>();
+        user = _model;
+
+        errorString = user.Email;
+        email = null;
+        password = null;
+        confirmPassword = null;
+    }
+
+    private async Task Login()
+    {
+        var postBody = new LoginRequest() {Email = email, Password = password};
+        using var response = await Http.PostAsJsonAsync("account/login", postBody);
+        var _model = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        loginModel = _model;
+
+        errorString = loginModel.User.Id.ToString() + " " + loginModel.User.Role;
+        email = null;
+        password = null;
+    }
+
+    private async Task LoginAdmin()
+    {
+        var postBody = new AdminLoginRequest() {Email = email, Password = password};
+        using var response = await Http.PostAsJsonAsync("account/loginAdmin", postBody);
+        var _model = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        loginModel = _model;
+
+        errorString = loginModel.User.Id.ToString() + " " + loginModel.User.Role;
+        email = null;
+        password = null;
+    }
+
+    private async Task Logout()
+    {
+        await Http.GetAsync($"account/logout/{loginModel.User.Id}");
+        user = null;
+    }
+
+    //logout
+    /*private async Task SendRequest()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, $"Account/logout");
+        request.Headers.Add("Accept", "application/vnd.github.v3+json");
+        request.Headers.Add("User-Agent", "HttpClientFactory-Sample");
+
+        var client = ClientFactory.CreateClient();
+
+        var responseJson = await client.SendAsync(request);
+
+        if (responseJson.IsSuccessStatusCode)
+        {
+            using var responseStream = await responseJson.Content.ReadAsStreamAsync();
+            var response = await JsonSerializer.DeserializeAsync<string>(responseStream);
+
+            user = null;
+        }
+        else
+        {
+            Exception("Error while logout");
+        }
+
+    }*/
+
+    public void Exception(string error)
+    {
+        errorString = error;
+    }
+
+    public void CloseError()
+    {
+        errorString = null;
+    }
+
+}
+

@@ -1,0 +1,268 @@
+﻿@page "/"
+@using BlazorApp.Shared.Models.ResponseModel.Page.MainPage
+@using BlazorApp.Shared.Models.ResponseModel.Stats
+@using BlazorApp.Shared.Models.ResponseModels.Quiz
+@inject HttpClient Http
+@inject NavigationManager Nv
+@if(_quizzes == null)
+{
+    <p>Loading</p>
+}
+else
+{
+    <!-- Header-->
+        <header class="bg-info py-5">
+            <div class="container px-5">
+                <div class="row gx-5 justify-content-center">
+                    <div class="col-lg-6">
+                        <div class="text-center my-5">
+                            <h1 class="display-5 fw-bolder text-white mb-2">ITExpert</h1>
+                            <p class="lead text-white-50 mb-4">Вивчай та перевіряй свої знання разом з ITExpert.</p>
+                            <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+                                <a class="btn btn-primary btn-lg px-4 me-sm-3" href="quizcatalog">Вперед!</a>
+                                <a class="btn btn-outline-light btn-lg px-4" href="register">Регістрація</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!-- Features section-->
+        <section class="py-5 border-bottom">
+            <div class="container px-5 my-5">
+                <div class="row gx-5">
+                    @foreach(var feature in _quizzes)
+                    {
+                        <div class="col-lg-4 mb-5 mb-lg-0">
+                            <div class="feature bg-primary bg-gradient text-white rounded-3 mb-3"><i class="bi bi-collection"></i></div>
+                            <h2 class="h4 fw-bolder">@feature.Name</h2>
+                            <p class="text-muted">@feature.Topic, @feature.QuestionsCount питань</p>
+                            <a class="text-decoration-none" @onclick="() => GoToQuiz(feature.Id)">
+                                Пройти!
+                                <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    }
+                    
+                </div>
+            </div>
+        </section>
+    <!-- Card section-->
+    <section class="bg-light py-5 border-bottom">
+        <div class="container px-5 my-5">
+            <div class="text-center mb-5">
+                <h2 class="fw-bolder">Вивчай різні мови програмування!</h2>
+                <p class="lead mb-0">З нами безкоштовно</p>
+            </div>
+            <div class="row gx-5 justify-content-center">
+                <!--C# card-->
+                @if (_cSharpinfo != null)
+                {
+                    <div class="col-lg-6 col-xl-4">
+                        <div class="card mb-5 mb-xl-0">
+                            <div class="card-body p-5">
+                                <div class="text-uppercase fw-bold">С#</div>
+                                <div class="mb-3">
+                                    <span class="display-4 fw-bold"></span>
+                                </div>
+                                <ul class="list-unstyled mb-4">
+                                    <li class="mb-2">
+                                        <i class="oi oi-check text-primary"></i>
+                                        <strong>@_cSharpinfo.CountOfPassed</strong> разів проходили тести по C#!
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="oi oi-check text-primary"></i>
+                                        <strong>@_cSharpinfo.CountOfQuizzez</strong> тестів було створено для вас!
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="oi oi-check text-primary"></i>
+                                        <strong>@_cSharpinfo.CountOfQuestions</strong> актуальних питань для вас підготували!
+                                    </li>
+                                </ul>
+                                <div class="d-grid"><a class="btn btn-outline-primary" href="quizcatalog">Вперед</a></div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                    <!--JS Card-->
+                @if (_jsInfo != null)
+                {
+                    <div class="col-lg-6 col-xl-4">
+                        <div class="card mb-5 mb-xl-0">
+                            <div class="card-body p-5">
+                                <div class="text-uppercase fw-bold">JavaScript</div>
+                                <div class="mb-3">
+                                    <span class="display-4 fw-bold"></span>
+                                </div>
+                                <ul class="list-unstyled mb-4">
+                                    <li class="mb-2">
+                                        <i class="oi oi-check text-primary"></i>
+                                        <strong>@_jsInfo.CountOfPassed</strong> разів проходили тести по JavaScript!
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="oi oi-check text-primary"></i>
+                                        <strong>@_jsInfo.CountOfQuizzez</strong> тестів було створено для вас!
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="oi oi-check text-primary"></i>
+                                        <strong>@_jsInfo.CountOfQuestions</strong> актуальних питань для вас підготували!
+                                    </li>
+                                </ul>
+                                <div class="d-grid"><a class="btn btn-outline-primary" href="quizcatalog">Вперед</a></div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                
+                @if (_cppInfo != null)
+                {
+                    <div class="col-lg-6 col-xl-4">
+                        <div class="card mb-5 mb-xl-0">
+                            <div class="card-body p-5">
+                                <div class="text-uppercase fw-bold">С++</div>
+                                <div class="mb-3">
+                                    <span class="display-4 fw-bold"></span>
+                                </div>
+                                <ul class="list-unstyled mb-4">
+                                    <li class="mb-2">
+                                        <i class="oi oi-check text-primary"></i>
+                                        <strong>@_cppInfo.CountOfPassed</strong> разів проходили тести по C++!
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="oi oi-check text-primary"></i>
+                                        <strong>@_cppInfo.CountOfQuizzez</strong> тестів було створено для вас!
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="oi oi-check text-primary"></i>
+                                        <strong>@_cppInfo.CountOfQuestions</strong> актуальних питань для вас підготували!
+                                    </li>
+                                </ul>
+                                <div class="d-grid"><a class="btn btn-outline-primary" href="quizcatalog">Вперед</a></div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                </div>
+            </div>
+        </section>
+        
+}
+
+
+
+
+@code{
+    private List<SmallQuizResponse> _quizzes = null;
+
+    private QuizzesStatsResponseModel quizzes1;
+    private CSharpCardInfo _cSharpinfo;
+    private JSCardInfo _jsInfo;
+    private CPPCardInfo _cppInfo;
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        using var csinforesponse = await Http.GetAsync($"homepage/csharpinfo");
+        var csharpinfo = await csinforesponse.Content.ReadFromJsonAsync<CSharpCardInfo>();
+        _cSharpinfo = csharpinfo;
+
+        using var jsinforesponse = await Http.GetAsync($"homepage/jsinfo");
+        var jsinfo = await jsinforesponse.Content.ReadFromJsonAsync<JSCardInfo>();
+        _jsInfo = jsinfo;
+
+        using var cppinforesponse = await Http.GetAsync($"homepage/cppinfo");
+        var cppinfo = await cppinforesponse.Content.ReadFromJsonAsync<CPPCardInfo>();
+        _cppInfo = cppinfo;
+
+        using var resposne = await Http.GetAsync($"homepage/");
+        var quizzes = await resposne.Content.ReadFromJsonAsync<IEnumerable<SmallQuizResponse>>();
+        _quizzes = quizzes.ToList();
+
+        
+    }
+
+    private void GoToQuiz(int id)
+    {
+        Nv.NavigateTo($"/passQuiz/{id}");
+    }
+    /*<!-- Testimonials section-->
+        <section class="py-5 border-bottom">
+            <div class="container px-5 my-5 px-5">
+                <div class="text-center mb-5">
+                    <h2 class="fw-bolder">Відгуки користувачей</h2>
+                </div>
+                <div class="row gx-5 justify-content-center">
+                    <div class="col-lg-6">
+                        <!-- Testimonial 1-->
+                        <div class="card mb-4">
+                            <div class="card-body p-4">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0"><i class="oi oi-chat-right-quote-fill text-primary fs-1"></i></div>
+                                    <div class="ms-4">
+                                        <p class="mb-1">Дуже дякую за ваш чудовий сервіс, дуже зручний та корисний!</p>
+                                        <div class="small text-muted">Іван, Київ</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Testimonial 2-->
+                        <div class="card">
+                            <div class="card-body p-4">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0"><i class="oi oi-chat-right-quote-fill text-primary fs-1"></i></div>
+                                    <div class="ms-4">
+                                        <p class="mb-1">Цікавий сайт! Хотілось би побачити більше тестів по javacript</p>
+                                        <div class="small text-muted">Олексій, Житомир</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Contact section-->
+        <section class="bg-light py-5">
+            <div class="container px-5 my-5 px-5">
+                <div class="text-center mb-5">
+                    <div class="feature bg-primary bg-gradient text-white rounded-3 mb-3"><i class="bi bi-envelope"></i></div>
+                    <h2 class="fw-bolder">Залишити відгук</h2>
+                    <p class="lead mb-0">Ми будемо раді почути вашу думку</p>
+                </div>
+                <div class="row gx-5 justify-content-center">
+                    <div class="col-lg-6">
+                        <form>
+                            <!-- Name input-->
+                            <div class="form-floating mb-3">
+                                <input class="form-control" id="name" type="text" placeholder="Enter your name..." data-sb-validations="required" />
+                                <label for="name">Ваше повне ім`я</label>
+                            </div>
+                            <!-- Email address input-->
+                            <div class="form-floating mb-3">
+                                <input class="form-control" id="email" type="email" placeholder="name@example.com" data-sb-validations="required,email" />
+                                <label for="email">Пошта</label>
+                            </div>
+                            <!-- Message input-->
+                            <div class="form-floating mb-3">
+                                <textarea class="form-control" type="text" placeholder="Введіть ваш відгук..." style="height: 10rem" ></textarea>
+                                <label for="message">Відгук</label>
+                            </div>
+                            <!-- Submit success message-->
+                            <!---->
+                            <!-- This is what your users will see when the form-->
+                            <!-- has successfully submitted-->
+                            <div class="d-none" id="submitSuccessMessage">
+                                <div class="text-center mb-3">
+                                    <div class="fw-bolder">Form submission successful!</div>
+                                    To activate this form, sign up at
+                                    <br />
+                                </div>
+                            </div>
+                            <div class="d-none" id="submitErrorMessage"><div class="text-center text-danger mb-3">Error sending message!</div></div>
+                            <div class="d-grid"><button class="btn btn-primary btn-lg disabled" id="submitButton" type="submit">Submit</button></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>*/
+}

@@ -1,0 +1,61 @@
+﻿@using BlazorApp.Shared.Models.ResponseModel.Session
+@layout AdminLayout
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <a class="navbar-brand d-lg-none" href="/">Адмін панель</a>
+    <button class="navbar-toggler" type="button" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse @NavBarCssClass">
+        <ul class="navbar-nav mx-auto">
+            <a class="navbar-brand d-none d-lg-block" href="/">Адмін панель</a>
+            <li class="nav-item">
+                <NavLink class="nav-link" href="admin">
+                    <span class="oi oi-home" aria-hidden="true"></span> Головна
+                </NavLink>
+            </li>
+            <li class="nav-item">
+                <NavLink class="nav-link" href="myQuizzes">
+                    <span class="oi oi-document" aria-hidden="true"></span> Тести
+                </NavLink>            
+            </li>
+            <li class="nav-item">
+                <NavLink class="nav-link" href="quiztopics">
+                    <span class="oi oi-book" aria-hidden="true"></span> Теми
+                </NavLink>            
+            </li>
+            <li class="nav-item">
+                <NavLink class="nav-link" href="users">
+                    <span class="oi oi-people" aria-hidden="true"></span> Користувачі
+                </NavLink>            
+            </li>
+            <li class="nav-item">
+                <div style="display:flex">
+                    <a class="btn btn-outline-info" href=""><span class="oi oi-home"></span></a>
+                    <button class="btn btn-outline-warning" title="Logout" @onclick="Layout.Logout"><span class="oi oi-account-logout"></span></button>
+			    </div>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+@code 
+{
+    private bool collapseNavMenu = true;
+    private string? NavBarCssClass => collapseNavMenu ? null : "show";
+    private string? NavButtonCssClass => collapseNavMenu ? "collapsed" : null;
+    [CascadingParameter]
+    public AdminLayout Layout { get; set; }
+    #nullable enable
+    public UserRoleResponse? _user { get; set; } = new UserRoleResponse();
+
+    private async void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        _user = await Layout.GetUser();
+
+    }
+}

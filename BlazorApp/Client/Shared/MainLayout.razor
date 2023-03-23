@@ -1,0 +1,217 @@
+﻿@using BlazorApp.Common.Exceptions
+@using BlazorApp.Shared.Models.RequestModels.User
+@using BlazorApp.Shared.Models.ResponseModel.Session
+@using BlazorApp.Shared.Models.ResponseModel.User
+@using System.Text.Json
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager Nv
+
+<CascadingValue Value="this">
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+		
+    </div>
+
+    <div class="main">
+        <div class="top-row px-4">
+        </div>
+
+        @*Application level state provider*@
+        <BlazorApp.Client.Shared.Pagination.PageIndexStateProvider>
+            <div class="content px-4">
+                @Body
+            </div>
+        </BlazorApp.Client.Shared.Pagination.PageIndexStateProvider>
+
+    </div>
+</div>
+</CascadingValue>
+
+
+<div class="modal-backdrop fade @(show ? "show" : "") @(display ? "d-block" : "d-none")"></div>
+
+<div class="modal fade @(show ? "show" : "")  @(display ? "d-block" : "d-none")" tabindex="-1" role="dialog">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Логін</h5>
+				<button type="button" class="btn-close" data-dismiss="modal" aria-label="Close" @onclick="Close">
+				</button>
+			</div>
+			<div class="modal-body">
+				@if (_errStr != String.Empty)
+				{
+					<div class="alert alert-dismissible alert-danger">
+						<button type="button" class="btn-close" data-bs-dismiss="alert" @onclick="() => _errStr = String.Empty" ></button>
+						 <strong>Помилка </strong><a href=""> @_errStr</a>
+					</div>
+				}
+				<div class="mb-3">
+					<label for="loginEmail" class="form-label">Пошта</label>
+					<input type="email" class="form-control" id="loginEmail" placeholder="name@example.com" autocomplete="off" required @bind-value="email" />
+				</div>
+				<div class="mb-3">
+					<label for="loginPassword" class="form-label">Пароль</label>
+					<input type="password" class="form-control" id="loginPassword" required @bind-value="password"/>
+				</div>
+				<div class="form-check mb-3">
+					<input class="form-check-input" type="checkbox" @bind-value="isAdmin" id="flexCheckDefault">
+					<label class="form-check-label" for="flexCheckDefault">
+						логін як адмін
+					</label>
+				  </div>
+			</div>
+			<div class="modal-footer">
+				@if (isAdmin)
+				{
+					<button type="button" class="btn btn-outline-success" @onclick="LoginAdmin">Логін</button>
+				}
+				else
+				{
+					<button type="button" class="btn btn-success" @onclick="Login">Логін</button>
+				}
+				<button type="button" class="btn btn-secondary" data-dismiss="modal" @onclick="Close">Закрити</button>
+			</div>
+		</div>
+	</div>
+</div>
+@code
+{
+	[CascadingParameter]
+	public Error Error { get; set; }
+
+	private string _errStr = String.Empty;
+	private bool show, display;
+	private string email, password;
+	private bool isAdmin;
+	#nullable enable
+	private UserRoleResponse? _user { get; set; } 
+	string? json;
+
+
+
+	public async Task<UserRoleResponse?> GetUser()
+	{
+		json = await JS.InvokeAsync<string>("localStorage.getItem", "user");
+		if (json != null)
+		{
+			_user = JsonSerializer.Deserialize<UserRoleResponse>(json);
+			return _user;
+		}
+		return null;
+
+	}
+
+	public async Task<bool> IsNullUserOrEmpty()
+	{
+		_user = await GetUser();
+		if(_user == null)
+			return true;
+		return false;
+	}
+
+	public async Task<bool> IsInRole(string role)
+	{
+		_user = await GetUser();
+		if(_user == null || _user.Role != role)
+			return false;
+		return true;
+	}
+
+
+	public void Procces(Exception ex)
+	{
+		Error.ProcessError(ex);
+	}
+
+	public void Procces(CustomException ex)
+	{
+		Error.ProcessError(ex);
+		if (ex.Code == System.Net.HttpStatusCode.NotFound)
+			Nv.NavigateTo($"/404/{ex.Message}");
+		if (ex.Code == System.Net.HttpStatusCode.InternalServerError)
+			Nv.NavigateTo($"/500/{ex.Message}");
+	}
+
+	public bool GetLoggedIn()
+	{
+		return !_user.IsBlocked;
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		json = await JS.InvokeAsync<string>("localStorage.getItem", "user");
+		if(json != null)
+			_user = JsonSerializer.Deserialize<UserRoleResponse>(json);
+	}
+
+	public async Task OpenLogin()
+	{
+		display = true;
+		await Task.Delay(100);
+		show = true;
+	}
+
+	public async Task Logout()
+	{
+		_user = null;
+		await Http.GetAsync($"account/logout");
+		await JS.InvokeVoidAsync("localStorage.removeItem", "user");
+		Nv.NavigateTo("/");
+		StateHasChanged();
+	}
+
+	private async Task Close()
+	{
+		show = false;
+		await Task.Delay(500);
+		display = false;
+	}
+
+	private async Task Login()
+	{
+		try
+		{
+			var postBody = new LoginRequest() {Email = email, Password = password};
+			using var response = await Http.PostAsJsonAsync("account/login", postBody);
+			var _model = await response.Content.ReadFromJsonAsync<LoginResponse>();
+			_user = _model.User;
+			var json = JsonSerializer.Serialize(_user);
+			await JS.InvokeVoidAsync("localStorage.setItem", "user", json);
+			StateHasChanged();
+			await Close();
+		}
+		catch (Exception ex)
+		{
+			Procces(ex);
+			_errStr = "Неправильний логін або пароль!";
+		}
+
+
+	}
+	private async Task LoginAdmin()
+	{
+		try
+		{
+			var postBody = new AdminLoginRequest() {Email = email, Password = password};
+			using var response = await Http.PostAsJsonAsync("account/loginAdmin", postBody);
+			var _model = await response.Content.ReadFromJsonAsync<LoginResponse>();
+			_user = _model.User;
+			var json = JsonSerializer.Serialize(_user);
+			await JS.InvokeVoidAsync("localStorage.setItem", "user", json);
+			StateHasChanged();
+			await Close();
+		}
+		catch (Exception ex)
+		{
+			Procces(ex);	
+			_errStr = "Неправильний логін або пароль!";
+		}
+		
+
+	}
+}
+

@@ -1,0 +1,63 @@
+﻿@page "/resultPage/{Id:int}"
+@using BlazorApp.Shared.Models.ResponseModel.User
+@using BlazorApp.Shared.Models.ResponseModels.Quiz
+@inject HttpClient Http
+@inject NavigationManager Nv
+@layout EmptyLayout
+<button @onclick="Back" class="btn btn-outline-dark oi oi-arrow-left"></button>
+<br/>
+<h2> @_result.Quiz.Name</h2>
+<br />
+<h4> Результат: </h4>
+@if (_result.CountOfCurrentAnswers >= _result.CountOfIncorrectAnswers)
+{
+    <strong class="text-success"> @_result.CountOfCurrentAnswers / @_questionsCount</strong>
+}
+else
+{
+    <strong class="text-danger"> @_result.CountOfCurrentAnswers / @_questionsCount</strong>
+}
+<br />
+<h5> Вірні відповіді, перевір себе:</h5>
+<hr />
+<div class="container">
+    @foreach (var question in _result.Quiz.Questions)
+    {
+        <h4>@question.Question</h4>
+        @foreach (var answer in question.Answers)
+        {
+            if (answer.IsCorrect)
+            {
+                <p class="text-success">@answer.Text</p>
+            }
+            else 
+            {
+                <p class="text-danger">@answer.Text</p> 
+            }
+        }
+        <hr />
+    }
+</div>
+
+
+
+@code {
+    [Parameter]
+    public int Id { get; set; } = 0;
+    private UserResultResponse _result { get; set; } = new UserResultResponse();
+    private int _questionsCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var resposne = await Http.GetAsync($"profile/getResult/{Id}");
+        var _model = await resposne.Content.ReadFromJsonAsync<UserResultResponse>();
+        _result = _model;
+        _questionsCount = _result.CountOfCurrentAnswers + _result.CountOfIncorrectAnswers;
+
+    }
+
+    public async Task Back()
+    {
+        Nv.NavigateTo("/");
+    }
+}

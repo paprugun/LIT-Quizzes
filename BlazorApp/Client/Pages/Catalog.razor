@@ -1,0 +1,289 @@
+﻿@page "/quizcatalog" 
+
+@inject HttpClient Http
+@inject NavigationManager Nv
+@using BlazorApp.Client.Shared.Pagination
+@using BlazorApp.Shared.Models.ResponseModels.Quiz
+<style>
+    * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    list-style: none;
+    font-family: 'Montserrat', sans-serif;
+}
+
+p {
+    margin: 0;
+}
+
+.category .job {
+    height: 280px;
+    border: 1px solid transparent;
+    padding: 30px 19px 25px 19px;
+    border-radius: 5px;
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+}
+
+.category .job:hover {
+    border: 1px solid #0d6efd;
+}
+
+.category .job span {
+    padding: 6px 20px;
+    font-weight: 400;
+    border-radius: 26px;
+    display: inline-block;
+}
+
+.category .job .colors1 {
+    font-weight: 800;
+    color: #F27E42;
+    background: #f27e4242;
+}
+
+.category .job .colors2 {
+    font-weight: 800;
+    color: #4294F2;
+    background: rgba(66, 148, 255, 0.26);
+}
+
+.category .job .colors3 {
+    font-weight: 800;
+    color: #2EB98D;
+    background: rgba(46, 185, 141, 0.03);
+}
+
+.category .job .colors4 {
+    font-weight: 800;
+    color: #6A42F2;
+    background: rgba(106, 66, 242, 0.07);
+}
+
+.category .job .colors5 {
+    font-weight: 800;
+    color: #F162BC;
+    background: rgba(241, 98, 188, 0.07);
+}
+
+.category .job .colors2 {
+    font-weight: 800;
+    color: #4294F2;
+    background: rgba(66, 148, 255, 0.26);
+}
+
+a {
+    text-decoration: none;
+    font-size: 20px;
+    font-weight: 600;
+    color: #071112;
+    text-transform: capitalize;
+    margin-bottom: 17px;
+    display: block;
+}
+
+.place {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    padding-left: 0px;
+    color: #76787A;
+}
+
+.left {
+    font-weight: 800;
+    position: relative;
+}
+
+.category .job span.time {
+    font-weight: 900;
+}
+
+.btn.btn-primary {
+    width: 150px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+
+.mt-30 {
+    margin-top: 30px;
+}
+
+.mb-30 {
+    margin-bottom: 30px;
+}
+
+.bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
+</style>
+<div class="container h-100">
+    <div class="d-flex align-items-center justify-content-center h-100">
+        <div class="d-flex flex-column">
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" placeholder="Пошук..." @onkeydown="@Enter" @onchange="(ChangeEventArgs e) => _filter = e.Value.ToString()">
+                <button class="btn btn-sm btn-outline-primary" type="button" @onclick="Search">Пошук</button>
+                @if (_filter != String.Empty)
+                {
+                    <button class="btn-close" type="button" @onclick="CleanFilters" style="margin-right: 15px"></button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+<div class="btn-group" role="group">
+    <div class="btn-group">
+        <button class="btn colors4 @(_filter == "C#" ? "active" : "")" @onclick='() => SetFilter("C#")'>C#</button>
+        <button class="btn colors5 @(_filter == "JavaScript" ? "active" : "")" @onclick='() => SetFilter("JavaScript")'>JS</button>
+        <button class="btn colors2 @(_filter == "C++" ? "active" : "")" @onclick='() => SetFilter("C++")'>C++</button>
+    </div>
+</div>
+<hr/>
+
+<div class="container">
+    <div class="row"> 
+        @foreach (var quiz in _quizzesPerPage)
+        {
+            var rnd = new Random().Next(1, 5).ToString();
+            <div class="col-lg-4 col-md-6 col-sm-6">
+                <div class="category mb-30">
+                    <div class="job">
+                        <span class="colors@(rnd) mb-4">@quiz.Topic</span>
+                        <h5 class="fw-bold text-wrap">@quiz.Name</h5>
+                        <div class="container">
+                            <div class="left">
+                                <p class="text-muted">@quiz.QuestionsCount Питань</p>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-lg colors@(rnd)" type="button" @onclick="() => GoToQuiz(quiz.Id)" style="margin-top:50px">Пройти</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        <div class="col-12 d-flex align-items-center justify-content-center">
+            <Pagination TotalPages="@(_totalPages != 0 ? _totalPages : 1)"
+                            PageIndex="@State.PageIndex"
+                            Radius="3"
+                            OnSelectedPage="@SelectedPage">
+            </Pagination>
+        </div>
+    </div>
+</div>
+@code {
+    [CascadingParameter]
+    public PageIndexStateProvider State { get; set; }
+
+    private List<SmallQuizResponse> _allQuizzes = null;
+    private List<SmallQuizResponse> _quizzesPerPage = new List<SmallQuizResponse>();
+
+    #region Additional propeties
+    private int _itemsPerPage = 9;
+    private int _totalPages = 1;
+    private string _filter = String.Empty;
+    private string _errString = String.Empty;
+    #endregion
+
+    private void SelectedPage(int selectedPageIndex)
+    {
+        if (_filter != String.Empty)
+        {
+            State.PageIndex = selectedPageIndex;
+            var skipcount = _itemsPerPage * (State.PageIndex - 1);
+
+            var filteredList = _allQuizzes.FindAll(x => x.Topic.Contains(_filter));
+            _quizzesPerPage = filteredList.Skip(skipcount).Take(_itemsPerPage).ToList();
+        }
+        if (_allQuizzes != null)
+        {
+            State.PageIndex = selectedPageIndex;
+            var skipcount = _itemsPerPage * (State.PageIndex - 1);
+            _quizzesPerPage = _allQuizzes.Skip(skipcount).Take(_itemsPerPage).ToList();
+        }
+    }
+
+    private async Task InitPagination()
+    {
+        if (_allQuizzes != null)
+        {
+            // Initialize the number of "totalPages"
+            _totalPages = (int)Math.Ceiling(double.Parse(_allQuizzes.Count.ToString()) / _itemsPerPage);
+
+            // Initialize the "item" which will be displayed when the page loaded first time.
+            var skipcount = _itemsPerPage * (State.PageIndex - 1);
+            _quizzesPerPage = _allQuizzes.Skip(skipcount).Take(_itemsPerPage).ToList();
+
+        }
+    }
+
+    private async Task SetFilteredPagination()
+    {
+        State.PageIndex = 1;
+        _totalPages = (int)Math.Ceiling(double.Parse(_quizzesPerPage.Count.ToString()) / _itemsPerPage);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshData();
+    }
+
+    private async Task RefreshData()
+    {
+        using var resposne = await Http.GetAsync($"catalog/");
+        var quizzes = await resposne.Content.ReadFromJsonAsync<IEnumerable<SmallQuizResponse>>();
+        _allQuizzes = quizzes.ToList();
+        await InitPagination();
+    }
+
+    private void GoToQuiz(int quizId)
+    {
+        Nv.NavigateTo($"/passQuiz/{quizId}");
+    }
+
+    private async Task SetFilter(string filter)
+    {
+        if (_filter != filter)
+        {
+            _filter = filter;
+
+            var filteredList = _allQuizzes.FindAll(x => x.Topic.Contains(filter));
+            _quizzesPerPage = filteredList.Take(_itemsPerPage).ToList();
+
+            await SetFilteredPagination();
+        }
+        else
+        {
+            await CleanFilters();
+        }
+
+    }
+
+
+    private async Task Search()
+    {
+        var filteredList = _allQuizzes.FindAll(x => x.Topic.Contains(_filter, StringComparison.OrdinalIgnoreCase));
+        _quizzesPerPage = filteredList.Take(_itemsPerPage).ToList();
+        await SetFilteredPagination();   
+    }
+
+    private async Task CleanFilters()
+    {
+        _filter = String.Empty;
+        await InitPagination();
+    }
+
+    private async Task Enter(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+        {
+            await Search();
+        }
+
+    }
+}

@@ -1,0 +1,191 @@
+﻿@page "/users"
+@inject HttpClient Http
+@inject NavigationManager Nv
+@layout AdminLayout
+@inject IJSRuntime JS
+@using BlazorApp.Client.Shared.Pagination
+@using BlazorApp.Models.ResponseModels.User
+@using BlazorApp.Shared.Models.ResponseModel.Session
+@using System.Text.Json
+  <table class="table table-hover">
+      <thead>
+        <div class="container h-100">
+            <div class="d-flex align-items-center justify-content-center h-100">
+                <div class="d-flex flex-column">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" placeholder="Пошук..." @onkeydown="@Enter" @onchange="(ChangeEventArgs e) => _filter = e.Value.ToString()">
+                        <button class="btn btn-sm btn-outline-primary" type="button" @onclick="Search">Пошук</button>
+                        @if (_filter != String.Empty)
+                        {
+                            <button class="btn-close" type="button" @onclick="CleanFilters" style="margin-right: 15px"></button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br/>
+        <input class="form-check-input" type="checkbox" @onchange="()=>RefreshTable(!_getAdmins)">
+        <label class="form-check-label">
+            Відображати адмінів
+        </label>
+        <tr>
+          <th scope="col">Id</th>
+          <th scope="col">Ім`я</th>
+          <th scope="col">Пошта</th>
+          <th scope="col">Статус</th>
+          <th scope="col">Роль</th>
+          <th scope="col">Налаштування</th>
+        </tr>
+      </thead>
+      <tbody class="table-group-divider">
+        @foreach (var item in _usersPerPage)
+        {
+            <tr>
+                <th scope="col">@item.Id</th>
+                <th scope="col"><a @onclick="() => UserInfo(item.Id)">@item.FirstName @item.LastName</a></th>
+                <th scope="col">@item.Email</th>
+                @if (@item.IsBlocked == true)
+                {
+                    <th scope="col">[Заблокованний]</th>
+                }
+                else
+                {
+                    <th scope="col">[Активний]</th>
+                }       
+                @if (item.Role == "User")
+                {
+                    <th scope="col"><span class="badge rounded-pill bg-info">Юзер</span></th>
+                }
+                else
+                {
+                    <th scope="col"><span class="badge rounded-pill bg-danger">Адмін</span></th>
+                }
+                <th scope="col"><button class="btn btn-primary oi oi-pencil" style="margin-left:25px" @onclick="() => UserInfo(item.Id)"></button><button class="btn btn-danger oi oi-trash" style="margin-left:5px" @onclick="() => DeleteUser(item.Id)"></button></th>
+            </tr>
+        }
+    </tbody>
+    <tfoot>
+        <Pagination TotalPages="@(_totalPages != 0 ? _totalPages : 1)"
+                    PageIndex="@State.PageIndex"
+                    Radius="3"
+                    OnSelectedPage="@SelectedPage">
+        </Pagination>
+    </tfoot>
+</table>
+@code {
+    [CascadingParameter]
+    public AdminLayout Layout { get; set; }
+
+    [CascadingParameter]
+    PageIndexStateProvider State { get; set; }
+
+    private List<UserRoleResponse> _allUsers = null;
+    private List<UserRoleResponse> _usersPerPage = new List<UserRoleResponse>();
+
+    #region additional props
+    private string _filter = String.Empty;
+    private bool _getAdmins = false;
+
+    private int _itemsPerPage = 10;
+    private int _totalPages = 1;
+    #endregion
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Layout.IsUserAdmin())
+        {
+            Nv.NavigateTo("/accessdenied");
+        }
+        else
+        {
+            using var resposne = await Http.GetAsync($"adminusers/getUsers");
+            var users = await resposne.Content.ReadFromJsonAsync<IEnumerable<UserRoleResponse>>();
+            _allUsers = users.ToList();
+            await RefreshPagination();
+        }
+
+    }
+
+    public async Task RefreshPagination()
+    {
+        if (_allUsers != null)
+        {
+            // Initialize the number of "totalPages"
+            _totalPages = (int)Math.Ceiling(double.Parse(_allUsers.Count.ToString()) / _itemsPerPage);
+
+            // Initialize the "item" which will be displayed when the page loaded first time.
+            var skipcount = _itemsPerPage * (State.PageIndex - 1);
+            _usersPerPage = _allUsers.Skip(_itemsPerPage * (State.PageIndex - 1)).Take(_itemsPerPage).ToList();
+
+        }
+    }
+
+    private void SelectedPage(int selectedPageIndex)
+    {
+        if (_allUsers != null)
+        {
+            State.PageIndex = selectedPageIndex;
+            var skipcount = _itemsPerPage * (State.PageIndex - 1);
+            _usersPerPage = _allUsers.Skip(_itemsPerPage * (State.PageIndex - 1)).Take(_itemsPerPage).ToList();
+        }
+    }
+
+    public async Task SetFilteredPagination()
+    {
+        State.PageIndex = 1;
+        _totalPages = (int)Math.Ceiling(double.Parse(_usersPerPage.Count.ToString()) / _itemsPerPage);
+    }
+
+    public async Task Search()
+    {
+        var filteredList = _allUsers.FindAll(x => x.FirstName.Contains(_filter, StringComparison.OrdinalIgnoreCase) || 
+                                            x.LastName.Contains(_filter, StringComparison.OrdinalIgnoreCase) || 
+                                            x.Email.Contains(_filter, StringComparison.OrdinalIgnoreCase));
+
+        _usersPerPage = filteredList.Take(_itemsPerPage).ToList();
+        await SetFilteredPagination();   
+    }
+
+    public async Task CleanFilters()
+    {
+        _filter = String.Empty;
+        await RefreshPagination();
+    }
+
+    public async Task RefreshTable(bool getAdmins)
+    {
+        var resposne = new HttpResponseMessage();
+
+        if(getAdmins)
+            resposne = await Http.GetAsync($"adminusers/getAll");
+        else
+            resposne = await Http.GetAsync($"adminusers/getUsers");
+
+        var users = await resposne.Content.ReadFromJsonAsync<IEnumerable<UserRoleResponse>>();
+        _allUsers = users.ToList();
+        _getAdmins = getAdmins;
+        await RefreshPagination();
+    }
+
+    public async Task DeleteUser(int userId)
+    {
+        await Http.DeleteAsync($"adminusers/hard/{userId}");
+        _allUsers.Remove(_allUsers.FirstOrDefault(x => x.Id == userId));
+        await RefreshPagination();
+    }
+
+    public void UserInfo(int userId)
+    {
+        Nv.NavigateTo($"userinfo/{userId}");
+    }
+
+    private async Task Enter(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+        {
+            await Search();
+        }
+
+    }
+}

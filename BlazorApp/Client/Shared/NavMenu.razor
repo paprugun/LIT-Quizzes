@@ -1,0 +1,79 @@
+﻿@using BlazorApp.Shared.Models.RequestModels.User
+@using BlazorApp.Shared.Models.ResponseModel.Session
+@using System.Text.Json
+@using BlazorApp.Shared.Models.ResponseModel.User
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager Nv
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <a class="navbar-brand d-lg-none" href="">ITExpert</a>
+    <button class="navbar-toggler" type="button" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse @NavBarCssClass">
+        <ul class="navbar-nav mx-auto">
+            <a class="navbar-brand d-none d-lg-block" href="">ITExpert</a>
+            <li class="nav-item">
+                <NavLink class="nav-link" href="">
+                    <span class="oi oi-home" aria-hidden="true"></span> Головна
+                </NavLink>
+            </li>
+            <li class="nav-item">
+                <NavLink class="nav-link" href="joinQuiz">
+                    <span class="oi oi-command" aria-hidden="true"></span> Увійти до тесту
+                </NavLink>            
+            </li>
+            <li class="nav-item">
+                <NavLink class="nav-link" href="quizcatalog">
+                    <span class="oi oi-bookmark" aria-hidden="true"></span> Каталог
+                </NavLink>            
+            </li>
+
+            <li class="nav-item">
+                <div style="margin-left:10px; display:flex">
+                    @switch(_user == null)
+                    {
+                        case false:
+                            if (_user.Role == "Admin")
+                            {
+                                <a class="btn btn-outline-info text-white" title="Account" href="admin" style="display: inline-block"><span class="oi oi-dashboard"></span></a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-outline-info text-white" title="Account" href="userpage" style="display: inline-block"><span class="oi oi-key"></span></a>
+                            }
+                            <button class="btn btn-outline-warning" title="Logout" @onclick="mainLayout.Logout"><span class="oi oi-account-logout"></span></button>
+                            break;
+                        case true:
+                        	<button class="btn btn-light" title="Login" @onclick="mainLayout.OpenLogin"><span class="oi oi-account-login"></span></button>
+                            break;
+                        default:
+                            break;
+                    }
+			    </div>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+@code 
+{
+    private bool collapseNavMenu = true;
+    private string? NavBarCssClass => collapseNavMenu ? null : "show";
+    private string? NavButtonCssClass => collapseNavMenu ? "collapsed" : null;
+    [CascadingParameter]
+    public MainLayout mainLayout { get; set; }
+    #nullable enable
+    public UserRoleResponse? _user { get; set; } = new UserRoleResponse();
+
+    private async void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        _user = await mainLayout.GetUser();
+    }
+}

@@ -1,0 +1,145 @@
+﻿@page "/admin"
+@using BlazorApp.Shared.Models.RequestModels.Quiz
+@using BlazorApp.Shared.Models.ResponseModel.Session
+@using BlazorApp.Shared.Models.ResponseModel.Stats
+@using BlazorApp.Shared.Models.ResponseModels.Quiz
+@using System.Diagnostics.CodeAnalysis
+@using Microsoft.AspNetCore.Authorization
+@using System.Text.Json
+@layout AdminLayout
+@inject HttpClient Http
+@inject NavigationManager Nv
+@inject IJSRuntime JS
+
+<div class="py-5">
+    <div class="container">
+        <div class="row hidden-md-up">
+            @if (_quizzes != null)
+            {
+                <div class="col-md-4">
+                    <div class="card h-100 p-5 border-primary">
+                        <div class="card-block">
+                            <h4 class="card-title text-center"><strong>Тести</strong></h4>
+                            <hr/>
+                            <p class="card-text"><strong>@_quizzes.QuizzesCount</strong> Тестів створенно</p>
+                            <p class="card-text"><strong>@_quizzes.QuestionsCount</strong> Питань існує</p>
+                            <p class="card-text"><strong>@_quizzes.AnswersCount</strong> Відповідей на питання існує</p>
+
+                        </div>
+                        <div class="d-grid"><a class="btn btn-outline-primary" href="myQuizzes">До тестів</a></div>
+
+                    </div>
+                </div> 
+            }
+            @if (_topics != null)
+            {
+                <div class="col-md-4">
+                    <div class="card h-100 p-5 border-warning">
+                        <div class="card-block" style="margin-top: 10px; margin-left: 10px">
+                            <h4 class="card-title text-center"><strong>Теми</strong></h4>
+                            <hr/>
+                            <p class="card-text"><strong>@_topics.TopicCount</strong> Тем створенно</p>
+                            <p class="card-text"><strong class="text-warning">@_topics.JSQuizzesCount</strong> Тестів по <strong>JavsScript</strong></p>
+                            <p class="card-text"><strong class="text-primary">@_topics.CPPQuizesCount</strong> Тестів по <strong>C++</strong></p>
+                            <p class="card-text"><strong class="text-success">@_topics.CSharpQuizzesCount</strong> Тестів по <strong>C#</strong></p>
+                        </div>
+                        <div class="d-grid"><a class="btn btn-outline-primary" href="quiztopics">До тем</a></div>
+                    </div>
+                </div>   
+            }
+            @if (_users != null)
+            {
+                <div class="col-md-4">
+                    <div class="card h-100 p-5 border-success">
+                        <div class="card-block">
+                            <h4 class="card-title text-center"><strong>Користуачі</strong></h4>
+                            <hr/>
+                            <p class="card-text p-y-1"><strong>@_users.RegisteredCount</strong> Користуачей зарегестровано</p>
+                            <p class="card-text p-y-1"><strong>@_users.QuizzesPassedCount</strong> Тестів було пройдено</p>
+                            <p class="card-text p-y-1"><strong>@_users.BlockedCount</strong> Користуавчей було заблоковано</p>
+                        </div>
+                        <div class="d-grid"><a class="btn btn-outline-primary" href="users">До користувачів</a></div>
+                    </div>
+                </div>   
+            }
+        </div><br>
+    </div>
+    <hr/>
+    <h3 class="text-center">Остані 10 тестів</h3>
+    <hr/>
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Id</th>
+          <th scope="col">Назва</th>
+          <th scope="col">Статус</th>
+          <th scope="col">Налаштування</th>
+        </tr>
+      </thead>
+      <tbody class="table-group-divider">
+         @foreach (var item in _allQuizzes)
+         {
+             <tr>
+                <th scope="col">@item.Id</th>
+                <th scope="col"><a href="/editQuiz/@item.Id">@item.Name</a></th>
+                @if (item.IsActive == true)
+                {
+                <th scope="col">[Активний]</th>
+                }
+                else
+                {
+                <th scope="col">[Не активний]</th>
+                }
+                <th scope="col"><a class="btn btn-primary oi oi-pencil" style="margin-left:25px" href="/editQuiz/@item.Id"></a></th>
+             </tr>
+         }
+      </tbody>
+    </table>
+</div>
+@code {
+    [CascadingParameter]
+    public AdminLayout Layout { get; set; }
+
+    private QuizzesStatsResponseModel _quizzes;
+    private UsersStatsResponseModel _users;
+    private TopicsStatsResponseModel _topics;
+
+    private List<SmallQuizResponse> _allQuizzes = new List<SmallQuizResponse>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Layout.IsUserAdmin())
+        {
+            Nv.NavigateTo("/accessdenied");
+        }
+        else
+        {
+            await GetStats();
+            await GetTable();
+        }
+    }
+
+
+    private async Task GetStats()
+    {
+        using var resposne = await Http.GetAsync($"moderatorpage/quizzesstats");
+        var model = await resposne.Content.ReadFromJsonAsync<QuizzesStatsResponseModel>();
+        _quizzes = model;
+
+        using var usersResponse = await Http.GetAsync($"moderatorpage/userstats");
+        var usersModel = await usersResponse.Content.ReadFromJsonAsync<UsersStatsResponseModel>();
+        _users = usersModel;
+
+        using var topicsResponse = await Http.GetAsync($"moderatorpage/topicstats");
+        var topicsModel = await topicsResponse.Content.ReadFromJsonAsync<TopicsStatsResponseModel>();
+        _topics = topicsModel;
+    }
+
+    private async Task GetTable()
+    {
+
+        using var resposne = await Http.GetAsync($"moderatorpage/");
+        var model = await resposne.Content.ReadFromJsonAsync<IEnumerable<SmallQuizResponse>>();
+        _allQuizzes = model.ToList();
+    }
+}

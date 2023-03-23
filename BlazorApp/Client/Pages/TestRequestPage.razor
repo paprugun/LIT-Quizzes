@@ -1,0 +1,218 @@
+﻿@page "/test-request"
+@using BlazorApp.Shared
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@using BlazorApp.Client.Components
+
+<h3>Test requests</h3>
+<div>
+    @if (_errors != null && _errors.Any())
+    {
+        @foreach (var item in _errors)
+        {
+            <p class="text-danger">
+                @item
+            </p>
+        }
+    }
+</div>
+<div>
+    <h3>
+        Request type: <strong>@_requestType.ToString()</strong>
+    </h3>
+    <div>
+        <button type="button" class="btn btn-secondary" @onclick="() => _reset()">RESET</button>
+        <button type="button" class="btn btn-link" @onclick="() => _redirect()">REDIRECT</button>
+    </div>
+    <br />
+    <div>
+        @if (_model != null)
+        {
+            <p>@_model.Summary</p>
+            <p>@_model.Date.ToShortDateString()</p>
+            <p>@_model.TemperatureC</p>
+        }
+        else
+        {
+            <p>No data</p>
+        }
+    </div>
+    <div>
+        <p>
+            Make request:
+        </p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-success" @onclick="() => _get()">GET</button>
+        <button type="button" class="btn btn-primary" @onclick="() => _post()">POST</button>
+        <button type="button" class="btn btn-info" @onclick="() => _patch()">PATCH</button>
+        <button type="button" class="btn btn-warning" @onclick="() => _put()">PUT</button>
+        <button type="button" class="btn btn-danger" @onclick="() => _delete()">DELETE</button>
+    </div>
+    <br/>
+    <div>
+        <BlazorApp.Client.Components.ToolTip Text="It`s onHower tooltip example">
+            <button type="button" class="btn btn-secondary disabled"> Hower on me</button>
+        </BlazorApp.Client.Components.ToolTip>
+
+        <button class="btn btn-secondary" @onclick="()=>OpenDialog()"> Show modal dialog</button>
+         <p>Dialog result: @DialogResult</p>
+    </div>
+</div>
+
+@if (DialogOpen)
+{
+    <ModalDialog Title="" ModalText="" OnClose="@OnCloseModalDialog" DialogType="ModalDialog.ModalDialogType.DeleteCancel"></ModalDialog>
+}
+
+@code {
+    private List<string> _errors;
+    private WeatherForecast _model;
+    private RequestType? _requestType;
+    private bool DialogOpen;
+
+    private bool? DialogResult;
+
+    private bool isLogin = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _errors = new List<string>();
+
+        if (!isLogin) _redirect();
+
+    }
+
+    private async Task _get()
+    {
+        _requestType = RequestType.GET;
+
+        try
+        {
+            using var resposne = await Http.GetAsync($"testrequest/");
+            _model = await resposne.Content.ReadFromJsonAsync<WeatherForecast>();
+        }
+        catch (Exception ex)
+        {
+            _createError(ex.Message);
+        }
+    }
+
+    private async Task _post()
+    {
+        var postBody = new 
+        {
+            Date = DateTime.Now.AddDays(-1),
+            TemperatureC = 5,
+            Summary = "cloudy"
+        };
+
+        _requestType = RequestType.POST;
+
+        try
+        {
+            using var response = await Http.PostAsJsonAsync("testrequest/", postBody);
+            _model = await response.Content.ReadFromJsonAsync<WeatherForecast>();
+        }
+        catch (Exception ex)
+        {
+            _createError(ex.Message);
+        }
+    }
+
+    private async Task _patch()
+    {
+        _requestType = RequestType.PATCH;
+
+        try
+        {
+            var response = await Http.PatchAsync($"testrequest/", null);
+            _model = await response.Content.ReadFromJsonAsync<WeatherForecast>();
+        }
+        catch (Exception ex)
+        {
+            _createError(ex.Message);
+        }
+    }
+
+    private async Task _put()
+    {
+        _requestType = RequestType.PUT;
+
+        var requestModel = new WeatherForecast()
+        {
+            TemperatureC = _model.TemperatureC + 5,
+            Date = DateTime.Now,
+            Summary = "Sunny"
+        };
+
+        try
+        {
+            using var response = await Http.PutAsJsonAsync("testrequest/", requestModel);
+            _model = await response.Content.ReadFromJsonAsync<WeatherForecast>();
+        }
+        catch (Exception ex)
+        {
+            _createError(ex.Message);
+        }
+    }
+
+    private async Task _delete()
+    {
+        _requestType = RequestType.DELETE;
+
+        try
+        {
+            var resposne = await Http.DeleteAsync("testrequest/");
+            _createError(await resposne.Content.ReadAsStringAsync());
+            _model = null;
+        }
+        catch (Exception ex)
+        {
+            _createError(ex.Message);
+        }
+    }
+
+    private void _createError(string error)
+    {
+        if (_errors == null)
+            _errors = new List<string>();
+
+        _errors.Add(error);
+    }
+
+    private void _reset()
+    {
+        _model = null;
+        _requestType = null;
+        _errors = null;
+    }
+
+    private void _redirect()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    private async Task OnCloseModalDialog(bool result)
+    {
+        DialogResult = result;
+        DialogOpen = false;
+        StateHasChanged();
+    }
+
+    private void OpenDialog()
+    {
+        DialogOpen = true;
+        StateHasChanged();
+    }
+
+
+    public enum RequestType
+    {
+        GET,
+        POST,
+        PUT,
+        PATCH,
+        DELETE
+    }
+}
