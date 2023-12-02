@@ -1,7 +1,6 @@
 ﻿@page "/editQuiz"
 @page "/editQuiz/{Id:int}"
 @using BlazorApp.Models.ResponseModels.Quiz
-@using BlazorApp.Models.ResponseModels.User
 @using BlazorApp.Shared.Models.RequestModels.Quiz
 @using BlazorApp.Shared.Models.ResponseModel.User
 @using BlazorApp.Shared.Models.ResponseModels.Quiz
@@ -202,7 +201,7 @@ else
         }
         else
         {
-            using var response = await Http.GetAsync($"quizadmin/getQuizById/{Id}");
+            using var response = await Http.GetAsync($"api/v1/quizadmin/{Id}");
             var _model = await response.Content.ReadFromJsonAsync<QuizResponse>();
             _quiz = _model;
         }
@@ -217,13 +216,13 @@ else
 
     }
 
-    private async Task EditName(string newName)
+    /*private async Task EditName(string newName)
     {
-        using var response = await Http.PutAsync($"quizadmin/changeQuizStatusById/{Id}-{newName}", null);
+        using var response = await Http.PutAsync($"api/v1/quizadmin/changeQuizStatus/{Id}-{newName}", null);
         var _model = await response.Content.ReadFromJsonAsync<QuizResponse>();
         _quiz.Name = _model.Name;
         ShowTextBox();
-    }
+    }*/
 
     private async Task BackToQuizzes()
     {
@@ -232,18 +231,18 @@ else
 
     private async Task DeleteQuiz()
     {
-        await Http.DeleteAsync($"quizadmin/deleteQuizById/{Id}");
+        await Http.DeleteAsync($"api/v1/quizadmin/{Id}");
         await BackToQuizzes();
     }
 
     private async Task DeleteQuestion(int id)
     {
-        var resposne = await Http.DeleteAsync($"quizadmin/deleteQuestionById/{id}");
+        var resposne = await Http.DeleteAsync($"api/v1/quizadmin/question/{id}");
         _quiz.Questions.Remove(_quiz.Questions.FirstOrDefault(x => x.Id == id));
     }
     private async Task DeleteResult(int id)
     {
-        var resposne = await Http.DeleteAsync($"adminresults/{id}");
+        var resposne = await Http.DeleteAsync($"api/v1/adminresults/{id}");
         _quiz.UsersJoined.Remove(_quiz.UsersJoined.FirstOrDefault(x => x.Id == id));
     }
     private async Task CreateQuestion(string questionText)
@@ -253,7 +252,7 @@ else
         if (isExistQuestion == null)
         {
             var postQuestionBody = new QuizQuestionRequest() {Question = questionText, QuizId = Id};
-            using var response = await Http.PostAsJsonAsync("quizadmin/postQuestion/", postQuestionBody);
+            using var response = await Http.PostAsJsonAsync("api/v1/quizadmin/question", postQuestionBody);
             var _model = await response.Content.ReadFromJsonAsync<QuizQuestionResponse>();
 
             if (addedAnswers != null)
@@ -261,7 +260,7 @@ else
                 foreach (var answer in addedAnswers)
                 {
                     answer.QuestionId = _model.Id;
-                    using var answerResponse = await Http.PostAsJsonAsync("quizadmin/postAnswer/", answer);
+                    using var answerResponse = await Http.PostAsJsonAsync("api/v1/quizadmin/answer", answer);
                     var _answerModel = await answerResponse.Content.ReadFromJsonAsync<QuizAnswerResponse>();
                     _model.Answers.Add(_answerModel);
                 }    
@@ -274,7 +273,7 @@ else
     }
     public async Task IsActive()
     {
-        using var response = await Http.PatchAsync($"quizadmin/changeQuizStatusById/{Id}", null);
+        using var response = await Http.PatchAsync($"api/v1/quizadmin/{Id}", null);
         var _model = await response.Content.ReadFromJsonAsync<QuizResponse>();
         _quiz.IsActive = _model.IsActive;
     }

@@ -1,32 +1,39 @@
-﻿@using BlazorApp.Common.Exceptions
+﻿@using BlazorApp.Client.Services;
+@using BlazorApp.Common.Exceptions
 @using BlazorApp.Shared.Models.RequestModels.User
+@using BlazorApp.Shared.Models.ResponseModel.Pagination;
 @using BlazorApp.Shared.Models.ResponseModel.Session
 @using BlazorApp.Shared.Models.ResponseModel.User
 @using System.Text.Json
+@using Newtonsoft.Json;
 @inherits LayoutComponentBase
 @inject IJSRuntime JS
+@inject IAccountService Service
 @inject HttpClient Http
 @inject NavigationManager Nv
 
 <CascadingValue Value="this">
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-		
+	<div class="sidebar px-4" style="background: #FBF9FD">
+		<NavMenu />
     </div>
 
     <div class="main">
-        <div class="top-row px-4">
-        </div>
-
         @*Application level state provider*@
         <BlazorApp.Client.Shared.Pagination.PageIndexStateProvider>
-            <div class="content px-4">
+            <div class="content" style="padding-top:0;">
                 @Body
             </div>
         </BlazorApp.Client.Shared.Pagination.PageIndexStateProvider>
 
+		<BlazoredToasts Position="Blazored.Toast.Configuration.ToastPosition.TopRight"
+						Timeout="10"
+						IconType="IconType.FontAwesome"
+						SuccessIcon="oi oi-thumb-up"
+						ErrorIcon="oi oi-bug"/>
     </div>
+
+
 </div>
 </CascadingValue>
 
@@ -88,17 +95,17 @@
 	private string email, password;
 	private bool isAdmin;
 	#nullable enable
-	private UserRoleResponse? _user { get; set; } 
+	private UserRoleResponseModel? _user { get; set; } 
 	string? json;
 
 
 
-	public async Task<UserRoleResponse?> GetUser()
+	public async Task<UserRoleResponseModel?> GetUser()
 	{
 		json = await JS.InvokeAsync<string>("localStorage.getItem", "user");
 		if (json != null)
 		{
-			_user = JsonSerializer.Deserialize<UserRoleResponse>(json);
+			_user = System.Text.Json.JsonSerializer.Deserialize<UserRoleResponseModel>(json);
 			return _user;
 		}
 		return null;
@@ -145,20 +152,20 @@
 	{
 		json = await JS.InvokeAsync<string>("localStorage.getItem", "user");
 		if(json != null)
-			_user = JsonSerializer.Deserialize<UserRoleResponse>(json);
+			_user = System.Text.Json.JsonSerializer.Deserialize<UserRoleResponseModel>(json);
 	}
 
 	public async Task OpenLogin()
 	{
 		display = true;
-		await Task.Delay(100);
+		//await Task.Delay(100);
 		show = true;
 	}
 
 	public async Task Logout()
 	{
+		await Service.Logout();
 		_user = null;
-		await Http.GetAsync($"account/logout");
 		await JS.InvokeVoidAsync("localStorage.removeItem", "user");
 		Nv.NavigateTo("/");
 		StateHasChanged();
@@ -167,7 +174,7 @@
 	private async Task Close()
 	{
 		show = false;
-		await Task.Delay(500);
+		//await Task.Delay(500);
 		display = false;
 	}
 
@@ -176,10 +183,9 @@
 		try
 		{
 			var postBody = new LoginRequest() {Email = email, Password = password};
-			using var response = await Http.PostAsJsonAsync("account/login", postBody);
-			var _model = await response.Content.ReadFromJsonAsync<LoginResponse>();
-			_user = _model.User;
-			var json = JsonSerializer.Serialize(_user);
+			var response = await Service.Login(postBody);
+			_user = response.User;
+			var json = System.Text.Json.JsonSerializer.Serialize(_user);
 			await JS.InvokeVoidAsync("localStorage.setItem", "user", json);
 			StateHasChanged();
 			await Close();
@@ -197,10 +203,9 @@
 		try
 		{
 			var postBody = new AdminLoginRequest() {Email = email, Password = password};
-			using var response = await Http.PostAsJsonAsync("account/loginAdmin", postBody);
-			var _model = await response.Content.ReadFromJsonAsync<LoginResponse>();
-			_user = _model.User;
-			var json = JsonSerializer.Serialize(_user);
+			var response = await Service.AdminLogin(postBody);
+			_user = response.User;
+			var json = System.Text.Json.JsonSerializer.Serialize(_user);
 			await JS.InvokeVoidAsync("localStorage.setItem", "user", json);
 			StateHasChanged();
 			await Close();

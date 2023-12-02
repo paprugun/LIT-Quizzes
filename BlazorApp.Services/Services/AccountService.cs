@@ -6,7 +6,6 @@ using BlazorApp.Domain.Entities.Identity;
 using BlazorApp.Models.RequestModels;
 using BlazorApp.Models.ResponseModels.Session;
 using BlazorApp.Services.Interfaces;
-using BlazorApp.Services.Interfaces.Utilities;
 using BlazorApp.Shared.Models.RequestModels;
 using BlazorApp.Shared.Models.ResponseModel.Session;
 using Microsoft.AspNetCore.Http;
@@ -29,7 +28,6 @@ namespace BlazorApp.Services.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IJWTService _jwtService;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ILocalStorageService<UserRoleResponse> _localStorage;
 
         private bool _isUserSuperAdmin = false;
         private bool _isUserAdmin = false;
@@ -41,15 +39,13 @@ namespace BlazorApp.Services.Services
             IJWTService jwtService,
             IHttpContextAccessor httpContextAccessor,
             IServiceProvider serviceProvider,
-            IConfiguration configuration,
-            ILocalStorageService<UserRoleResponse> localStorageService)
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _hashUtility = hashUtility;
             _unitOfWork = unitOfWork;
             _jwtService = jwtService;
             _httpContextAccessor = httpContextAccessor;
-            _localStorage = localStorageService;
 
             var context = httpContextAccessor.HttpContext;
 
@@ -73,7 +69,7 @@ namespace BlazorApp.Services.Services
         {
             model.Email = model.Email.Trim().ToLower();
             
-            ApplicationUser user = _unitOfWork.Repository<ApplicationUser>().Find(x => x.Email.ToLower() == model.Email);
+            ApplicationUser user = _unitOfWork.Repository<ApplicationUser>().Get(x => x.Email.ToLower() == model.Email).Include(w => w.Profile).FirstOrDefault();
 
             if (user != null && user.EmailConfirmed)
                 throw new CustomException(HttpStatusCode.UnprocessableEntity, "email", "Email is already registered");
@@ -150,10 +146,9 @@ namespace BlazorApp.Services.Services
         {
             var user = _unitOfWork.Repository<ApplicationUser>().Get(x => x.Email == model.Email)
                 .Include(x => x.Profile)
-                    .ThenInclude(w => w.User)
                 .Include(x => x.UserRoles)
                     .ThenInclude(x => x.Role)
-                    .FirstOrDefault();
+                .FirstOrDefault();
 
             if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password) || !user.UserRoles.Any(x => x.Role.Name == Role.User))
                 throw new CustomException(HttpStatusCode.BadRequest, "credentials", "Invalid credentials");
@@ -185,7 +180,7 @@ namespace BlazorApp.Services.Services
             return await _jwtService.BuildLoginResponse(user, model.AccessTokenLifetime);
         }
 
-        public async Task<TokenResponseModel> RefreshTokenAsync(string refreshToken, List<string> roles)
+        public async Task<Models.ResponseModels.Session.TokenResponseModel> RefreshTokenAsync(string refreshToken, List<string> roles)
         {
             var token = _unitOfWork.Repository<UserToken>().Get(w => w.RefreshTokenHash == _hashUtility.GetHash(refreshToken) && w.IsActive && w.RefreshExpiresDate > DateTime.UtcNow)
                 .TagWith(nameof(RefreshTokenAsync) + "_GetRefreshToken")

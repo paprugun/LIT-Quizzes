@@ -16,7 +16,9 @@ using Microsoft.AspNetCore.Http;
 using BlazorApp.Common.Extensions;
 using Microsoft.EntityFrameworkCore;
 using BlazorApp.Shared.Models.ResponseModel.User;
-
+using BlazorApp.Models.ResponseModels;
+using BlazorApp.Models.RequestModels;
+using BlazorApp.Models.Enums;
 
 namespace BlazorApp.Services.Services
 {
@@ -61,8 +63,10 @@ namespace BlazorApp.Services.Services
                     .ThenInclude(w => w.Quiz)
                     .FirstOrDefault();
 
-            var quiz = _unitOfWork.Repository<Quiz>().Get(x => x.Id == model.QuizId).FirstOrDefault();
-            var questions = _unitOfWork.Repository<QuizQuestion>().Get(x => x.QuizId == quiz.Id);
+            var quiz = _unitOfWork.Repository<Quiz>().Get(x => x.Id == model.QuizId)
+                                                    .Include(w => w.Questions)
+                                                        .ThenInclude(w => w.Answers)
+                                                    .FirstOrDefault();
             
             if (user == null)
                 throw new CustomException(System.Net.HttpStatusCode.Unauthorized, "Unauthorized", "Unauthorized user cannot access quiz");
@@ -73,31 +77,22 @@ namespace BlazorApp.Services.Services
 
             if (user.QuizzesResults.FirstOrDefault(x => x.QuizId == quiz.Id) == null)
             {
-                user.QuizzesResults.Add(new UsersResults() {QuizId = quiz.Id, UserId = user.Id, JoinedAt = DateTime.Now, ResultMark = 0 });
+                user.QuizzesResults.Add(new UsersResults() {QuizId = quiz.Id, UserId = user.Id, JoinedAt = DateTime.UtcNow, ResultMark = 0 });
                 _unitOfWork.Repository<ApplicationUser>().Update(user);
                 _unitOfWork.SaveChanges();
             }
             else 
             {
                 user.QuizzesResults.FirstOrDefault(x => x.QuizId == quiz.Id).ResultMark = 0;
-                user.QuizzesResults.FirstOrDefault(x => x.QuizId == quiz.Id).JoinedAt = DateTime.Now;
+                user.QuizzesResults.FirstOrDefault(x => x.QuizId == quiz.Id).JoinedAt = DateTime.UtcNow;
                 _unitOfWork.Repository<ApplicationUser>().Update(user);
                 _unitOfWork.SaveChanges();
             }
             
-            var quizResponseModel = _mapper.Map<QuizResponseModel>(quiz);
-            quizResponseModel.Questions = _mapper.Map<List<QuizQuestionResponseModel>>(questions);
-
-            foreach (var question in quizResponseModel.Questions)
-            {
-                var answers = _unitOfWork.Repository<QuizAnswer>().Get(x => x.QuestionId == question.Id);
-                question.Answers = _mapper.Map<List<QuizAnswerResponseModel>>(answers);
-            }
-
             var response = new JoinQuizResponseModel()
             {
                 Name = user.UserName,
-                CurrentQuiz = _mapper.Map<QuizResponse>(quizResponseModel),
+                CurrentQuiz = _mapper.Map<QuizResponse>(quiz),
                 UserId = user.Id,
             };
 
@@ -110,6 +105,8 @@ namespace BlazorApp.Services.Services
             var user = _unitOfWork.Repository<ApplicationUser>().Get(x => x.Id == _userId)
                                                                 .Include(w => w.QuizzesResults)
                                                                     .ThenInclude(w => w.Quiz)
+                                                                        .ThenInclude(w => w.Questions)
+                                                                            .ThenInclude(w => w.Answers)
                                                                 .Include(w => w.Profile)
                                                                 .FirstOrDefault();
 
@@ -119,14 +116,13 @@ namespace BlazorApp.Services.Services
                 throw new CustomException(System.Net.HttpStatusCode.Forbidden, "user deleted", "user was deleted from quiz");
 
             var quizSession = user.QuizzesResults.FirstOrDefault(x => x.QuizId == model.QuizId);
-            var questions = _unitOfWork.Repository<QuizQuestion>().Get(x => x.QuizId == model.QuizId).ToList();
             var response = new PassQuizResponseModel();
 
 
-            foreach (var question in questions)
+            foreach (var question in quizSession.Quiz.Questions)
             {
-                var usersCorrectAnswers = model.UserAnswers.FindAll(x => x.QuestionId == question.Id && x.IsCorrect == true);
-                var correctAnswers = _unitOfWork.Repository<QuizAnswer>().Get(x => x.QuestionId == question.Id && x.IsCorrect == true).ToList();
+                var usersCorrectAnswers = model.UserAnswers.FindAll(x => x.QuestionId == question.Id && x.IsCorrect);
+                var correctAnswers = question.Answers.ToList().FindAll(x => x.IsCorrect);
                 if (usersCorrectAnswers.Count == correctAnswers.Count)
                     response.CorrectAnswersCount++;
                 else
@@ -135,15 +131,66 @@ namespace BlazorApp.Services.Services
             }
 
             response.Name = user.Profile.FullName;
-            response.FinalMark = response.CorrectAnswersCount / questions.Count;
+            response.FinalMark = response.CorrectAnswersCount / quizSession.Quiz.Questions.Count;
             response.ResultId = quizSession.Id;
             quizSession.CountOfCorrectAnswers = response.CorrectAnswersCount;
             quizSession.CountOfIncorrectAnswers = response.InCorrectAnswersCount;
-            quizSession.FinishedAt = DateTime.Now;
+            quizSession.FinishedAt = DateTime.UtcNow;
             _unitOfWork.Repository<UsersResults>().Update(quizSession);
             _unitOfWork.SaveChanges();
 
             return response;
         }
+
+        public PaginationResponseModel<SmallQuizResponseModel> GetAll(PaginationRequestModel<QuizTableColumn> model)
+        {
+            List<SmallQuizResponseModel> response = new List<SmallQuizResponseModel>();
+
+            var search = !string.IsNullOrEmpty(model.Search) && model.Search.Length > 1;
+
+            var quizzes = _unitOfWork.Repository<Quiz>().Get(x => x.Questions.Count != -1
+                                            && (!search || (x.Name.Contains(model.Search) || x.Author.Contains(model.Search) || x.Topic.Name.Contains(model.Search)))
+                                            )
+                                        .TagWith(nameof(GetAll) + "_GetQuizzes")
+                                        .Include(w => w.Topic)
+                                        .Include(w => w.Questions)
+                                            .ThenInclude(w => w.Answers)
+                                        .Select(x => new
+                                        {
+                                            Name = x.Name,
+                                            Author = x.Author,
+                                            Topic = x.Topic,
+                                            IsActive = x.IsActive,
+                                            CreatedAt = x.CreatedAt,
+                                            QuestionsCount = x.Questions.Count,
+                                            Id = x.Id
+                                        });
+
+
+            if (search)
+                quizzes = quizzes.Where(x => x.Name.Contains(model.Search) || x.Author.Contains(model.Search) || x.Topic.Name.Contains(model.Search));
+
+            int count = quizzes.Count();
+
+            if (model.Order != null)
+                quizzes = quizzes.OrderBy(model.Order.Key.ToString(), model.Order.Direction == SortingDirection.Asc);
+
+            quizzes = quizzes.Skip(model.Offset).Take(model.Limit);
+
+            response = quizzes.Select(x => new SmallQuizResponseModel
+            {
+                Name = x.Name,
+                Topic = x.Topic.Name,
+                Author = x.Author,
+                QuestionsCount = x.QuestionsCount,
+                CreatedAt = x.CreatedAt,
+                IsActive = x.IsActive,
+                Id = x.Id
+
+            }).ToList();
+
+            return new(response, count);
+        }
+        
     }
 }

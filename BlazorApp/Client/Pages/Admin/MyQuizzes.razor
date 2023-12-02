@@ -1,5 +1,8 @@
 ﻿@page "/myQuizzes"
+@using BlazorApp.Client.Services;
 @using BlazorApp.Client.Shared.Pagination
+@using BlazorApp.Shared.Models.Enums;
+@using BlazorApp.Shared.Models.RequestModels.Pagination;
 @using BlazorApp.Shared.Models.RequestModels.Quiz
 @using BlazorApp.Shared.Models.ResponseModel.Quiz
 @using BlazorApp.Shared.Models.ResponseModel.Session
@@ -11,6 +14,7 @@
 @inject NavigationManager Nv
 @layout AdminLayout
 @inject IJSRuntime JS
+@inject IQuizService _service
 
 
     @if (_allQuizzes != null)
@@ -54,7 +58,7 @@
         </div>
 
         <button class="btn btn-success oi oi-plus" data-bs-toggle="modal" data-bs-target="#exampleModal"> </button>
-        <button @onclick="RefreshTable" class="btn btn-datatable oi oi-reload"> </button>
+        <button @onclick="() => RefreshTable(new PaginationRequestModel<QuizTableColumn>())" class="btn btn-datatable oi oi-reload"> </button>
         <div class="container h-100">
             <div class="d-flex align-items-center justify-content-center h-100">
                 <div class="d-flex flex-column">
@@ -82,7 +86,7 @@
         </tr>
       </thead>
       <tbody class="table-group-divider">
-         @foreach (var item in _quizzesPerPage)
+         @foreach (var item in _allQuizzes)
          {
              <tr>
                 <th scope="col">@item.Id</th>
@@ -123,9 +127,8 @@
     [CascadingParameter]
     public PageIndexStateProvider State { get; set; }
 
-    private List<TopicResponse> _topics = null;
-    private List<SmallQuizResponse> _allQuizzes = null;
-    private List<SmallQuizResponse> _quizzesPerPage = new List<SmallQuizResponse>();
+    private List<TopicResponse> _topics = new List<TopicResponse>();
+    private List<SmallQuizResponse> _allQuizzes = new List<SmallQuizResponse>();
 
     #region additional props
 
@@ -139,16 +142,17 @@
     bool _showQuizModal = false;
     private string _filter = String.Empty;
 
+    private int _offset = 0;
     private int _itemsPerPage = 10;
-    private int _totalPages = 1;
+    private int _totalPages = 0;
     #endregion
-    private void SelectedPage(int selectedPageIndex)
+    private async Task SelectedPage(int selectedPageIndex)
     {
         if (_allQuizzes != null)
         {
             State.PageIndex = selectedPageIndex;
-            var skipcount = _itemsPerPage * (State.PageIndex - 1);
-            _quizzesPerPage = _allQuizzes.Skip(skipcount).Take(_itemsPerPage).ToList();
+            _offset = _offset * (State.PageIndex - 1);
+            await RefreshTable(new PaginationRequestModel<QuizTableColumn>() { Offset = _offset, Limit = _itemsPerPage, Search = _filter});
         }
     }
 
@@ -160,43 +164,24 @@
         }
         else
         {
-            _topics = new List<TopicResponse>();
-            await RefreshTable();
+            State.PageIndex = 1;
+            await RefreshTable(new PaginationRequestModel<QuizTableColumn>());
             await RefreshTopics();
         }
     }
 
-    public async Task RefreshPagination()
-    {
-        if (_allQuizzes != null)
-        {
-            // Initialize the number of "totalPages"
-            _totalPages = (int)Math.Ceiling(double.Parse(_allQuizzes.Count.ToString()) / _itemsPerPage);
-
-            // Initialize the "item" which will be displayed when the page loaded first time.
-            var skipcount = _itemsPerPage * (State.PageIndex - 1);
-            _quizzesPerPage = _allQuizzes.Skip(_itemsPerPage * (State.PageIndex - 1)).Take(_itemsPerPage).ToList();
-
-        }
-    }
-
-    public async Task SetFilteredPagination()
-    {
-        State.PageIndex = 1;
-        _totalPages = (int)Math.Ceiling(double.Parse(_quizzesPerPage.Count.ToString()) / _itemsPerPage);
-    }
 
     public async Task Search()
     {
-        var filteredList = _allQuizzes.FindAll(x => x.Topic.Contains(_filter, StringComparison.OrdinalIgnoreCase));
-        _quizzesPerPage = filteredList.Take(_itemsPerPage).ToList();
-        await SetFilteredPagination();   
+        State.PageIndex = 1;
+        await RefreshTable(new PaginationRequestModel<QuizTableColumn>() { Offset = 0, Search = _filter, Limit = _itemsPerPage});
     }
 
     public async Task CleanFilters()
     {
         _filter = String.Empty;
-        await RefreshPagination();
+        State.PageIndex = 1;
+        await RefreshTable(new PaginationRequestModel<QuizTableColumn>());
     }
 
     public async Task CreateQuizMethod()
@@ -204,10 +189,10 @@
         try
         {
             var postBody = new QuizRequest() {Name=name, Author = "Admin", IsActive = true, Topic = _topic };
-            using var response = await Http.PostAsJsonAsync("quizadmin", postBody);
+            using var response = await Http.PostAsJsonAsync("api/v1/quizadmin", postBody);
             var _model = await response.Content.ReadFromJsonAsync<QuizResponse>();
 
-            await RefreshTable();
+            await RefreshTable(new PaginationRequestModel<QuizTableColumn>());
         }
         catch (Exception ex)
         {
@@ -218,17 +203,18 @@
 
     public async Task RefreshTopics()
     {
-        using var resposne = await Http.GetAsync($"topics/");
+        using var resposne = await Http.GetAsync($"api/v1/topics");
         var topics = await resposne.Content.ReadFromJsonAsync<IEnumerable<TopicResponse>>();
         _topics = topics.ToList();
     }
 
-    public async Task RefreshTable()
+    public async Task RefreshTable(PaginationRequestModel<QuizTableColumn> model)
     {
-        using var resposne = await Http.GetAsync($"quizadmin/getAllSmallQuizzes/");
-        var quizzes = await resposne.Content.ReadFromJsonAsync<IEnumerable<SmallQuizResponse>>();
-        _allQuizzes = quizzes.ToList();
-        await RefreshPagination();
+        var response = await _service.GetAll(model);
+        _allQuizzes = response.Data;
+        _itemsPerPage = model.Limit;
+        _offset = response.Pagination.NextOffset;
+        _totalPages = (int)Math.Ceiling(double.Parse(response.Pagination.TotalCount.ToString()) / _itemsPerPage);
     }
 
     public async Task GetTopic(string topic)
@@ -251,16 +237,15 @@
 
     public async Task DeleteQuiz(int id)
     {
-        await Http.DeleteAsync($"quizadmin/deleteQuizById/{id}");
-        await RefreshTable();
+        await Http.DeleteAsync($"api/v1/quizadmin/{id}");
+        await RefreshTable(new PaginationRequestModel<QuizTableColumn>());
     }
 
     public async Task DeleteTopic(int id)
     {
-        await Http.DeleteAsync($"admintopics/{id}");
+        await Http.DeleteAsync($"api/v1/admintopics/{id}");
         await RefreshTopics();
     }
-
 
     private async Task Enter(KeyboardEventArgs e)
     {

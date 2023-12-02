@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BlazorApp.Shared.Models.ResponseModel.Pagination.CursorPagination
 {
-    public class CursorJsonPaginationResponseModel<T> : JsonResponseModel<T> where T : class
+    public class CursorJsonPaginationResponseModel<T> : JsonResponse<T> where T : class
     {
         public CursorJsonPaginationResponseModel(T newdata, int? lastId)
             : base(newdata)

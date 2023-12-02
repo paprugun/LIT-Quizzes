@@ -14,5 +14,6 @@ namespace BlazorApp.Models.ResponseModels.Quiz
         public string Topic { get; set; }
         public bool IsActive { get; set; }
         public int QuestionsCount { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }

@@ -4,265 +4,725 @@
 @using BlazorApp.Shared.Models.ResponseModels.Quiz
 @inject HttpClient Http
 @inject NavigationManager Nv
-@if(_quizzes == null)
-{
-    <p>Loading</p>
-}
-else
-{
-    <!-- Header-->
-        <header class="bg-info py-5">
-            <div class="container px-5">
-                <div class="row gx-5 justify-content-center">
-                    <div class="col-lg-6">
-                        <div class="text-center my-5">
-                            <h1 class="display-5 fw-bolder text-white mb-2">ITExpert</h1>
-                            <p class="lead text-white-50 mb-4">Вивчай та перевіряй свої знання разом з ITExpert.</p>
-                            <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
-                                <a class="btn btn-primary btn-lg px-4 me-sm-3" href="quizcatalog">Вперед!</a>
-                                <a class="btn btn-outline-light btn-lg px-4" href="register">Регістрація</a>
+<link href='https://fonts.googleapis.com/css?family=Average Sans' rel='stylesheet'>
+@layout MainLayout
+<style>
+    header {
+        overflow: hidden;
+        border-radius: 0px 0px 125px 125px;
+        background: #FBF9FD;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Устанавливаем фотографию на задний план текста на маленьких экранах */
+    @@media (max-width: 767px) {
+        body, html {
+            margin: 0;
+            padding: 0;
+        }
+
+        header .container-fluid {
+            margin: 0;
+            padding: 0;
+        }
+
+        header .row {
+            margin: 0;
+            padding: 0;
+        }
+
+        header .col-lg-8 {
+            display: none; /* Скрываем вторую колонку на маленьких экранах */
+        }
+
+        header .col-lg-4 {
+            background: url('images/pleased-ginger-woman-shirt-holding-books-looking-away-removebg.png') no-repeat left center;
+            background-size: cover; /* Масштабируем изображение, чтобы оно покрыло всю площадь блока */
+            text-align: center; /* Центрируем текст по центру изображения */
+            position: relative;
+        }
+
+        header .col-lg-4::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        header .col-lg-4 h1,
+        header .col-lg-4 h6,
+        header .col-lg-4 .btn {
+            position: relative;
+            z-index: 1; /* Помещаем текст и кнопку поверх прозрачного фона */
+        }
+    }
+
+
+    .brand-title {
+        color: #3B3E85;
+        font-family: Average Sans;
+        font-size: 18px;
+        font-style: normal;
+        font-weight: 400;
+        line-height: normal;
+        letter-spacing: 13.68px;
+        text-transform: uppercase;
+    }
+
+        .brand-title:hover {
+            color: #3B3E85; /* Цвет текста при наведении */
+        }
+
+    .nav-item:hover .nav-link {
+        color: #3B3E85;
+        background-color: transparent; /* Чтобы сохранить фон прозрачным */
+    }
+
+    #section1 {
+        padding-bottom: 50px;
+    }
+
+    #section1_ul li:hover {
+        color: orange; /* Изменяйте этот цвет на желаемый оранжевый цвет */
+        cursor: pointer; /* Добавляет стандартный курсор при наведении для показа, что элемент можно кликнуть */
+    }
+
+    .course-card {
+        width: 265px;
+        height: 250px;
+        flex-shrink: 0;
+        border-radius: 34px;
+        background: #FBF9FD;
+        border: 1px solid transparent;
+        padding: 30px 19px 25px 19px;
+        box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    }
+
+    .category .job {
+        height: 350px;
+        border: 1px solid transparent;
+        padding: 30px 19px 25px 19px;
+        border-radius: 30px;
+        background: #FBF9FD;
+        box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .more-info {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        background-color: #007bff;
+        color: #fff;
+        padding: 10px 20px;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        pointer-events: none;
+        border-top-left-radius: 15px; /* Скругленные углы вверхнего левого угла */
+        border-bottom-right-radius: 5px; /* Скругленные углы нижнего правого угла */
+    }
+
+    .job:hover .more-info {
+        transform: translateX(0);
+    }
+
+
+    .category .job span {
+        padding: 6px 20px;
+        font-weight: 400;
+        border-radius: 26px;
+        display: inline-block;
+    }
+
+    .category .job .colors1 {
+        font-weight: 800;
+        color: #F27E42;
+        background: #f27e4242;
+    }
+
+    .category .job .colors2 {
+        font-weight: 800;
+        color: #4294F2;
+        background: rgba(66, 148, 255, 0.26);
+    }
+
+    .category .job .colors3 {
+        font-weight: 800;
+        color: #2EB98D;
+        background: rgba(46, 185, 141, 0.03);
+    }
+
+    .category .job .colors4 {
+        font-weight: 800;
+        color: #6A42F2;
+        background: rgba(106, 66, 242, 0.07);
+    }
+
+    .category .job .colors5 {
+        font-weight: 800;
+        color: #F162BC;
+        background: rgba(241, 98, 188, 0.07);
+    }
+
+    .category .job .colors2 {
+        font-weight: 800;
+        color: #4294F2;
+        background: rgba(66, 148, 255, 0.26);
+    }
+
+    a {
+        text-decoration: none;
+        font-size: 20px;
+        font-weight: 600;
+        color: #071112;
+        text-transform: capitalize;
+        margin-bottom: 17px;
+        display: block;
+    }
+
+    .place {
+        display: flex;
+        align-items: center;
+        font-size: 12px;
+        padding-left: 0px;
+        color: #76787A;
+    }
+
+    .left {
+        font-weight: 800;
+        margin-top: 20px;
+        position: relative;
+    }
+
+    .category .job span.time {
+        font-weight: 900;
+    }
+
+    .btn.btn-primary {
+        width: 150px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+
+    .mt-30 {
+        margin-top: 30px;
+    }
+
+    .mb-30 {
+        margin-bottom: 30px;
+    }
+
+    .bottom {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+    }
+
+
+    .list-item-right {
+        width: 350px;
+        border: 1px solid transparent;
+        padding: 30px 19px 25px 19px;
+        border-radius: 15px;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 20px;
+        background-color: transparent;
+        transition: background-color 0.3s ease, color 0.3s ease;
+        cursor: pointer;
+    }
+
+        .list-item-right:hover {
+            background-color: #fff;
+            color: #282A68;
+        }
+
+            .list-item-right:hover .list-item-headertext {
+                color: #282A68;
+            }
+
+    .arrow-icon svg {
+        height: 100%;
+        width: 24px;
+        transition: opacity 0.3s;
+    }
+
+    .arrow-icon {
+        display: flex;
+        align-items: center;
+        margin-left: auto; /* Отступ от текста до стрелочки */
+        opacity: 0; /* Скрытая стрелочка до наведения */
+    }
+
+    /* Показываем стрелочку при наведении */
+    .list-item-right:hover .arrow-icon svg {
+        opacity: 1;
+    }
+
+    /* Стили для прямоугольника со стрелочкой */
+    .arrow-icon svg {
+        fill: rgba(40, 42, 104, 0.5); /* Полупрозрачный фон прямоугольника */
+        border-radius: 10px; /* Закругленные углы прямоугольника */
+    }
+
+
+    .list-item-header {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+
+    .list-item-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background-color: white; /* Белый цвет фона */
+    }
+
+    #section2 {
+        border-radius: 0px 0px 125px 125px;
+    }
+
+        #section2 .image {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+    #section3 {
+        background: #FBF9FD;
+        margin-top 0;
+    }
+
+    .advantage-cards {
+        justify-content: center;
+        align-items: center;
+    }
+
+    .advantage-card {
+        position: relative;
+        overflow: hidden;
+        width: 384px;
+        height: 390px;
+        border-radius: 24px;
+        display: flex; /* Добавьте это свойство, чтобы включить flex-контейнер */
+        flex-direction: column; /* Установите направление столбца для контейнера */
+        margin-left: 10px;
+    }
+
+        .advantage-card .image {
+            width: 100%; /* Заполните всю ширину контейнера */
+            flex-shrink: 0; /* Запретить изображению сжиматься */
+            margin-top: auto; /* Прижать изображение к нижней части карточки */
+        }
+
+    /* Скрываем карусель на больших экранах */
+    @@media (min-width: 992px) {
+        #myCarousel {
+            display: none;
+        }
+
+        .advatage-cards {
+            display: flex;
+            flex-direction: row;
+        }
+    }
+
+    /* Скрываем карточки на маленьких экранах */
+    @@media (max-width: 991px) {
+        .advantage-cards {
+            display: none;
+        }
+
+        .advantage-card {
+            display: flex;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        /* Показываем карусель на маленьких экранах */
+        #myCarousel {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    }
+
+    footer {
+        background: #FFFF;
+    }
+
+</style>
+<header class="px-4">
+    <div class="container-fluid">
+        <div class="row g-0">
+            <div class="col-lg-4 vh-100 d-flex flex-column justify-content-center align-items-center">
+                <div class="container">
+                    <h1 style="color: #282A68"><b>Навчатись онлайн набагато простіше</b></h1>
+                    <h6 style="color: #535252">ITExpert - цікава платформа, що зробить навчання комфортним</h6>
+                    <a class="btn btn-warning rounded-pill" style="margin-top: 30px">Почни зараз</a>
+                </div>
+            </div>
+            <div class="col-lg-8 vh-100 d-flex justify-content-end align-items-end position-relative">
+                <img class="img-fluid align-self-end" src="images/pleased-ginger-woman-shirt-holding-books-looking-away-removebg.png">
+            </div>
+        </div>
+    </div>
+</header>
+<section class="justify-content-center" id="section1">
+    <h1 class="text-center px-5" style="color: #282A68; margin-top: 50px">Знайди кращий курс для себе</h1>
+    <div class="container">
+        <ul class="list-unstyled d-flex flex-row justify-content-between px-5" style="color: #535252; margin-top: 30px" id="section1_ul">
+            <li>C#</li>
+            <li>PYTHON</li>
+            <li>JAVA</li>
+            <li>C++</li>
+            <li>JAVASCRIPT</li>
+            <li>SWIFT</li>
+        </ul>
+        <div class="container mt-5">
+            <div class="row">
+                <div class="col-lg-4 col-md-6 col-sm-6">
+                    <div class="category mb-30">
+                        <div class="job">
+                            <span class="colors4 mb-4">C#</span>
+                            <h5 class="fw-bold text-wrap">ООП Та базові навчики</h5>
+                            <div class="container">
+                                <div class="left d-flex flex-column">
+                                    <div class="d-flex flex-row">
+                                        10 занять
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <i class="oi oi-star"></i> Підготовчий
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <i class="oi oi-book"></i> Українська
+                                    </div>
+                                </div>
                             </div>
+                            <div class="more-info"><strong>Дізнатись більше</strong></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 col-sm-6">
+                    <div class="category mb-30">
+                        <div class="job">
+                            <span class="colors5 mb-4">C#</span>
+                            <h5 class="fw-bold text-wrap">ASP.NET</h5>
+                            <div class="container">
+                                <div class="left d-flex flex-column">
+                                    <div class="d-flex flex-row">
+                                        7 занять
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <i class="oi oi-star"></i> Підготовчий
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <i class="oi oi-book"></i> Англійська
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="more-info"><strong>Дізнатись більше</strong></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 col-sm-6">
+                    <div class="category mb-30">
+                        <div class="job">
+                            <span class="colors3 mb-4">C#</span>
+                            <h5 class="fw-bold text-wrap">OOP Advanced</h5>
+                            <div class="container">
+                                <div class="left d-flex flex-column align-bottom">
+                                    <div class="d-flex flex-row">
+                                        11 занять
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <i class="oi oi-star"></i> Базовий
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <i class="oi oi-book"></i> Англійська
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="more-info"><strong>Дізнатись більше</strong></div>
                         </div>
                     </div>
                 </div>
             </div>
-        </header>
-        <!-- Features section-->
-        <section class="py-5 border-bottom">
-            <div class="container px-5 my-5">
-                <div class="row gx-5">
-                    @foreach(var feature in _quizzes)
-                    {
-                        <div class="col-lg-4 mb-5 mb-lg-0">
-                            <div class="feature bg-primary bg-gradient text-white rounded-3 mb-3"><i class="bi bi-collection"></i></div>
-                            <h2 class="h4 fw-bolder">@feature.Name</h2>
-                            <p class="text-muted">@feature.Topic, @feature.QuestionsCount питань</p>
-                            <a class="text-decoration-none" @onclick="() => GoToQuiz(feature.Id)">
-                                Пройти!
-                                <i class="bi bi-arrow-right"></i>
-                            </a>
+        </div>
+        <div class="justify-content-center text-center">
+            <a class="rounded-pill btn btn-warning" style="border-radius:5px; width: 235px; height: 40px">Більше курсів</a>
+        </div>
+    </div>
+</section>
+<section id="section2" class="px-4" style="background: #FBF9FD; border-radius: 100px 100px 0px 0px; padding-top: 20px;">
+    <div class="container-fluid">
+        <div class="row g-0">
+            <div class="col-lg-6 justify-content-center">
+                <ul class="d-flex flex-column list-unstyled px-4">
+                    <li class="w-100" style="margin-top:15px;">
+                        <div class="list-item-right w-100">
+                            <div class="list-item-header">
+                                <div class="list-item-icon" style="margin-right: 10px;">
+                                    <svg width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M8.87 6.008A1 1 0 0 0 7 6.5V26a1 1 0 1 0 2 0V8h15a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H11a1 1 0 1 0 0 2h13a3 3 0 0 0 3-3V9a3 3 0 0 0-3-3H9a1.01 1.01 0 0 0-.13.008Z" fill="#34384A"></path>
+                                    </svg>
+                                </div>
+                                <h5 class="list-item-headertext"><strong>Для тих, хто тільки починає</strong></h5>
+                            </div>
+                            <div class="list-item-text">
+                                <p>Отримай базові знання з популярних IT-напрямів і заклади фундамент для подальшого розвитку.</p>
+                            </div>
                         </div>
-                    }
-                    
+                    </li>
+                    <li class="w-100" style="margin-top:15px;">
+                        <div class="list-item-right w-100">
+                            <div class="list-item-header">
+                                <div class="list-item-icon" style="margin-right: 10px;">
+                                    <svg width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="m16.581 8.187-.58-.416-.582.416-7 5a1 1 0 1 0 1.162 1.627l6.42-4.585 6.418 4.585a1 1 0 0 0 1.162-1.627l-7-5Zm0 7-.58-.415-.582.415-7 5a1 1 0 1 0 1.162 1.627l6.42-4.585 6.418 4.585a1 1 0 0 0 1.162-1.627l-7-5Z" fill="#34384A"></path>
+                                    </svg>
+                                </div>
+                                <h5 class="list-item-headertext"><strong>Для тих, хто хоче вийти на новий рівень</strong></h5>
+                            </div>
+                            <div class="list-item-text">
+                                <p>Вдосконалюй свої навички та розширюй знання в суміжних технологіях.</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="w-100" style="margin-top:15px;">
+                        <div class="list-item-right w-100">
+                            <div class="list-item-header">
+                                <div class="list-item-icon" style="margin-right: 10px;">
+                                    <svg width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M22.654 10.243a1 1 0 0 1 .103 1.41l-7.602 8.803-3.851-3.738a1 1 0 1 1 1.393-1.435l2.33 2.261 6.216-7.198a1 1 0 0 1 1.41-.103Z" fill="#34384A"></path>
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M15.5 10a6.5 6.5 0 1 0 6.5 6.5 1 1 0 1 1 2 0A8.5 8.5 0 1 1 15.5 8a1 1 0 1 1 0 2Z" fill="#34384A"></path>
+                                    </svg>
+                                </div>
+                                <h5 class="list-item-headertext"><strong>Для тих, хто готовий до глибокого занурення</strong></h5>
+                            </div>
+                            <div class="list-item-text">
+                                <p>Поглиблюй свої знання та навички для грунтовного освоєння обраного напряму.</p>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-lg-6">
+                <h2 style="color: #282A68; margin-top: 15px; margin-bottom:15px;"><b>Обери навчальну програму для свого рівня знань</b></h2>
+                <p style="color: #282A68;">Ми пропонуємо різноманітні навчальні можливості – від базових курсів для самостійного опрацювання до поглиблених стажувань, що допоможуть покращити навички та розвинути твій потенціал.</p>
+                <div class="image">
+                    <img class="img-fluid" src="images/e1c787b3050dd4e53900d4c9f9beabed.png" style="max-width: 100%; max-height: 100%;">
                 </div>
             </div>
-        </section>
-    <!-- Card section-->
-    <section class="bg-light py-5 border-bottom">
-        <div class="container px-5 my-5">
-            <div class="text-center mb-5">
-                <h2 class="fw-bolder">Вивчай різні мови програмування!</h2>
-                <p class="lead mb-0">З нами безкоштовно</p>
+        </div>
+    </div>
+</section>
+<section id="section3" class="px-4">
+    <h2 class="text-center" style="color: #282A68; margin-top: 15px; margin-bottom:15px;"><b>Чому вам варто навчатись у нас?</b></h2>
+    <div class="advantage-cards row">
+        <div class="col-lg-4 col-md-4 advantage-card" style="background-color: rgb(255, 241, 167);">
+            <div class="px-4 mt-4">
+                <h4 style="color: black;"><b>Різноманітність навчальних форматів</b></h4>
             </div>
-            <div class="row gx-5 justify-content-center">
-                <!--C# card-->
-                @if (_cSharpinfo != null)
-                {
-                    <div class="col-lg-6 col-xl-4">
-                        <div class="card mb-5 mb-xl-0">
-                            <div class="card-body p-5">
-                                <div class="text-uppercase fw-bold">С#</div>
-                                <div class="mb-3">
-                                    <span class="display-4 fw-bold"></span>
-                                </div>
-                                <ul class="list-unstyled mb-4">
-                                    <li class="mb-2">
-                                        <i class="oi oi-check text-primary"></i>
-                                        <strong>@_cSharpinfo.CountOfPassed</strong> разів проходили тести по C#!
-                                    </li>
-                                    <li class="mb-2">
-                                        <i class="oi oi-check text-primary"></i>
-                                        <strong>@_cSharpinfo.CountOfQuizzez</strong> тестів було створено для вас!
-                                    </li>
-                                    <li class="mb-2">
-                                        <i class="oi oi-check text-primary"></i>
-                                        <strong>@_cSharpinfo.CountOfQuestions</strong> актуальних питань для вас підготували!
-                                    </li>
-                                </ul>
-                                <div class="d-grid"><a class="btn btn-outline-primary" href="quizcatalog">Вперед</a></div>
-                            </div>
-                        </div>
+            <div class="px-4 mt-1">
+                <h6>Ти можеш обрати курс, який підходить твоєму технічному досвіду й уподобанням у навчанні – починаючи від базових self-study програм і завершуючи стажуваннями advanced-рівня.</h6>
+            </div>
+            <div class="image">
+                <img alt="VarietyOfLearningTypesTitle" loading="eager" decoding="async" data-nimg="fill" sizes="100vw"
+                     srcset="https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=640&amp;q=75 640w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=750&amp;q=75 750w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=828&amp;q=75 828w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=1080&amp;q=75 1080w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=1200&amp;q=75 1200w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=1920&amp;q=75 1920w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=2048&amp;q=75 2048w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=3840&amp;q=75 3840w"
+                     src="https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=3840&amp;q=75"
+                     style="height: 100%; width: 100%; object-fit: cover; color: transparent;">
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-4 advantage-card" style="background-color: rgb(228, 237, 148);">
+            <div class="px-4 mt-4">
+                <h4 style="color: black;"><b>Проєктна освіта</b></h4>
+            </div>
+            <div class="px-4 mt-1">
+                <h6>Отримай практичний досвід співпраці в команді на наших тренувальних та благодійних проєктах.</h6>
+            </div>
+            <div class="image">
+                <img alt="ProjectBasedEducationTitle" loading="eager" decoding="async" data-nimg="fill" sizes="100vw"
+                     srcset="https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=640&amp;q=75 640w,
+                        https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=750&amp;q=75 750w,
+                        https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=828&amp;q=75 828w,
+                        https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=1080&amp;q=75 1080w,
+                        https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=1200&amp;q=75 1200w,
+                        https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=1920&amp;q=75 1920w,
+                        https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=2048&amp;q=75 2048w,
+                        https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=3840&amp;q=75 3840w"
+                     src="https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=3840&amp;q=75"
+                     style="height: 100%; width: 100%; object-fit: cover; color: transparent;">
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-4 advantage-card" style="background-color: rgb(212, 240, 254);">
+            <div class="px-4 mt-4">
+                <h4 style="color: black;"><b>Найактуальніші матеріали</b></h4>
+            </div>
+            <div class="px-4 mt-1">
+                <h6>Матеріали для програм, які створені експертами EPAM з різних країн і пройшли перевірку сотнями тренінгів.</h6>
+            </div>
+            <div class="image">
+                <img alt="TopNotchMaterialsTitle" loading="eager" decoding="async" data-nimg="fill" sizes="100vw"
+                     srcset="https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=640&amp;q=75 640w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=750&amp;q=75 750w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=828&amp;q=75 828w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=1080&amp;q=75 1080w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=1200&amp;q=75 1200w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=1920&amp;q=75 1920w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=2048&amp;q=75 2048w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=3840&amp;q=75 3840w"
+                     src="https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=3840&amp;q=75"
+                     style="height: 100%; width: 100%; inset: 0px; object-fit: cover; color: transparent;">
+            </div>
+        </div>
+    </div>
+    <div id="myCarousel" class="carousel slide" data-ride="carousel">
+        <div class="carousel-inner">
+
+            <!-- Карточка 1 -->
+            <div class="carousel-item active">
+                <div class="col-lg-4 d-flex flex-column advantage-card mt-1" style="background-color: rgb(255, 241, 167);">
+                    <div class="px-4 mt-4">
+                        <h4 style="color: black;"><b>Різноманітність навчальних форматів</b></h4>
                     </div>
-                }
-                    <!--JS Card-->
-                @if (_jsInfo != null)
-                {
-                    <div class="col-lg-6 col-xl-4">
-                        <div class="card mb-5 mb-xl-0">
-                            <div class="card-body p-5">
-                                <div class="text-uppercase fw-bold">JavaScript</div>
-                                <div class="mb-3">
-                                    <span class="display-4 fw-bold"></span>
-                                </div>
-                                <ul class="list-unstyled mb-4">
-                                    <li class="mb-2">
-                                        <i class="oi oi-check text-primary"></i>
-                                        <strong>@_jsInfo.CountOfPassed</strong> разів проходили тести по JavaScript!
-                                    </li>
-                                    <li class="mb-2">
-                                        <i class="oi oi-check text-primary"></i>
-                                        <strong>@_jsInfo.CountOfQuizzez</strong> тестів було створено для вас!
-                                    </li>
-                                    <li class="mb-2">
-                                        <i class="oi oi-check text-primary"></i>
-                                        <strong>@_jsInfo.CountOfQuestions</strong> актуальних питань для вас підготували!
-                                    </li>
-                                </ul>
-                                <div class="d-grid"><a class="btn btn-outline-primary" href="quizcatalog">Вперед</a></div>
-                            </div>
-                        </div>
+                    <div class="px-4 mt-1">
+                        <h6>Ти можеш обрати курс, який підходить твоєму технічному досвіду й уподобанням у навчанні – починаючи від базових self-study програм і завершуючи стажуваннями advanced-рівня.</h6>
                     </div>
-                }
-                
-                @if (_cppInfo != null)
-                {
-                    <div class="col-lg-6 col-xl-4">
-                        <div class="card mb-5 mb-xl-0">
-                            <div class="card-body p-5">
-                                <div class="text-uppercase fw-bold">С++</div>
-                                <div class="mb-3">
-                                    <span class="display-4 fw-bold"></span>
-                                </div>
-                                <ul class="list-unstyled mb-4">
-                                    <li class="mb-2">
-                                        <i class="oi oi-check text-primary"></i>
-                                        <strong>@_cppInfo.CountOfPassed</strong> разів проходили тести по C++!
-                                    </li>
-                                    <li class="mb-2">
-                                        <i class="oi oi-check text-primary"></i>
-                                        <strong>@_cppInfo.CountOfQuizzez</strong> тестів було створено для вас!
-                                    </li>
-                                    <li class="mb-2">
-                                        <i class="oi oi-check text-primary"></i>
-                                        <strong>@_cppInfo.CountOfQuestions</strong> актуальних питань для вас підготували!
-                                    </li>
-                                </ul>
-                                <div class="d-grid"><a class="btn btn-outline-primary" href="quizcatalog">Вперед</a></div>
-                            </div>
-                        </div>
+                    <div class="image">
+                        <img alt="VarietyOfLearningTypesTitle" loading="eager" decoding="async" data-nimg="fill" sizes="100vw"
+                             srcset="https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=640&amp;q=75 640w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=750&amp;q=75 750w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=828&amp;q=75 828w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=1080&amp;q=75 1080w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=1200&amp;q=75 1200w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=1920&amp;q=75 1920w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=2048&amp;q=75 2048w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=3840&amp;q=75 3840w"
+                             src="https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fvariety-of-learning.svg&amp;w=3840&amp;q=75"
+                             style="height: 100%; width: 100%; object-fit: cover; color: transparent;">
                     </div>
-                }
                 </div>
             </div>
-        </section>
-        
-}
 
+            <!-- Карточка 2 -->
+            <div class="carousel-item">
+                <div class="col-lg-4 d-flex flex-column advantage-card mt-1" style="background-color: rgb(228, 237, 148);">
+                    <div class="px-4 mt-4">
+                        <h4 style="color: black;"><b>Проєктна освіта</b></h4>
+                    </div>
+                    <div class="px-4 mt-1">
+                        <h6>Отримай практичний досвід співпраці в команді на наших тренувальних та благодійних проєктах.</h6>
+                    </div>
+                    <div class="image">
+                        <img alt="ProjectBasedEducationTitle" loading="eager" decoding="async" data-nimg="fill" sizes="100vw"
+                             srcset="https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=640&amp;q=75 640w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=750&amp;q=75 750w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=828&amp;q=75 828w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=1080&amp;q=75 1080w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=1200&amp;q=75 1200w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=1920&amp;q=75 1920w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=2048&amp;q=75 2048w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=3840&amp;q=75 3840w"
+                             src="https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Fproject-based-education.svg&amp;w=3840&amp;q=75"
+                             style="height: 100%; width: 100%; object-fit: cover; color: transparent;">
+                    </div>
+                </div>
+            </div>
 
+            <!-- Карточка 3 -->
+            <div class="carousel-item">
+                <div class="col-lg-4 d-flex flex-column advantage-card mt-1" style="background-color: rgb(212, 240, 254);">
+                    <div class="px-4 mt-4">
+                        <h4 style="color: black;"><b>Найактуальніші матеріали</b></h4>
+                    </div>
+                    <div class="px-4 mt-1">
+                        <h6>Матеріали для програм, які створені експертами EPAM з різних країн і пройшли перевірку сотнями тренінгів.</h6>
+                    </div>
+                    <div class="image">
+                        <img alt="TopNotchMaterialsTitle" loading="eager" decoding="async" data-nimg="fill" sizes="100vw"
+                             srcset="https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=640&amp;q=75 640w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=750&amp;q=75 750w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=828&amp;q=75 828w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=1080&amp;q=75 1080w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=1200&amp;q=75 1200w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=1920&amp;q=75 1920w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=2048&amp;q=75 2048w,
+    https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=3840&amp;q=75 3840w"
+                             src="https://training.epam.com/_next/image?url=%2Fimages%2Fhome%2Fhow-do-we-teach%2Ftop-notch-materials.png&amp;w=3840&amp;q=75"
+                             style="height: 100%; width: 100%; inset: 0px; object-fit: cover; color: transparent;">
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- Навигация -->
+        <button class="carousel-control-prev" type="button" data-bs-target="#myCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#myCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+</section>
+<div class="container">
+    <footer class="text-center text-lg-start">
+        <div class="container p-4 pb-0">
+            <section class="">
+                <div class="row">
+                    <div class="col-md-3 col-lg-3 col-xl-3 mx-auto mt-3">
+                        <h6 class="brand-title">
+                            ITExpert
+                        </h6>
+                    </div>
 
-@code{
+                    <hr class="w-100 clearfix d-md-none" />
+
+                    <div class="col-md-2 col-lg-2 col-xl-2 mx-auto mt-3">
+                        <a class="text-muted">Головна</a>
+                        <a class="text-muted">Курси</a>
+                    </div>
+
+                    <div class="col-md-4 col-lg-3 col-xl-3 mx-auto mt-3">
+                        <h6 class="text-uppercase mb-4 font-weight-bold">Контакти</h6>
+                        <p>New York, NY 10012, US</p>
+                        <p>info@gmail.com</p>
+                        <p>+ 01 234 567 88</p>
+                        <p>+ 01 234 567 89</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </footer>
+</div>
+@code {
+
     private List<SmallQuizResponse> _quizzes = null;
 
     private QuizzesStatsResponseModel quizzes1;
-    private CSharpCardInfo _cSharpinfo;
-    private JSCardInfo _jsInfo;
-    private CPPCardInfo _cppInfo;
-
 
     protected override async Task OnParametersSetAsync()
     {
-        using var csinforesponse = await Http.GetAsync($"homepage/csharpinfo");
-        var csharpinfo = await csinforesponse.Content.ReadFromJsonAsync<CSharpCardInfo>();
-        _cSharpinfo = csharpinfo;
-
-        using var jsinforesponse = await Http.GetAsync($"homepage/jsinfo");
-        var jsinfo = await jsinforesponse.Content.ReadFromJsonAsync<JSCardInfo>();
-        _jsInfo = jsinfo;
-
-        using var cppinforesponse = await Http.GetAsync($"homepage/cppinfo");
-        var cppinfo = await cppinforesponse.Content.ReadFromJsonAsync<CPPCardInfo>();
-        _cppInfo = cppinfo;
-
-        using var resposne = await Http.GetAsync($"homepage/");
-        var quizzes = await resposne.Content.ReadFromJsonAsync<IEnumerable<SmallQuizResponse>>();
-        _quizzes = quizzes.ToList();
-
-        
     }
 
-    private void GoToQuiz(int id)
-    {
-        Nv.NavigateTo($"/passQuiz/{id}");
-    }
-    /*<!-- Testimonials section-->
-        <section class="py-5 border-bottom">
-            <div class="container px-5 my-5 px-5">
-                <div class="text-center mb-5">
-                    <h2 class="fw-bolder">Відгуки користувачей</h2>
-                </div>
-                <div class="row gx-5 justify-content-center">
-                    <div class="col-lg-6">
-                        <!-- Testimonial 1-->
-                        <div class="card mb-4">
-                            <div class="card-body p-4">
-                                <div class="d-flex">
-                                    <div class="flex-shrink-0"><i class="oi oi-chat-right-quote-fill text-primary fs-1"></i></div>
-                                    <div class="ms-4">
-                                        <p class="mb-1">Дуже дякую за ваш чудовий сервіс, дуже зручний та корисний!</p>
-                                        <div class="small text-muted">Іван, Київ</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Testimonial 2-->
-                        <div class="card">
-                            <div class="card-body p-4">
-                                <div class="d-flex">
-                                    <div class="flex-shrink-0"><i class="oi oi-chat-right-quote-fill text-primary fs-1"></i></div>
-                                    <div class="ms-4">
-                                        <p class="mb-1">Цікавий сайт! Хотілось би побачити більше тестів по javacript</p>
-                                        <div class="small text-muted">Олексій, Житомир</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-        <!-- Contact section-->
-        <section class="bg-light py-5">
-            <div class="container px-5 my-5 px-5">
-                <div class="text-center mb-5">
-                    <div class="feature bg-primary bg-gradient text-white rounded-3 mb-3"><i class="bi bi-envelope"></i></div>
-                    <h2 class="fw-bolder">Залишити відгук</h2>
-                    <p class="lead mb-0">Ми будемо раді почути вашу думку</p>
-                </div>
-                <div class="row gx-5 justify-content-center">
-                    <div class="col-lg-6">
-                        <form>
-                            <!-- Name input-->
-                            <div class="form-floating mb-3">
-                                <input class="form-control" id="name" type="text" placeholder="Enter your name..." data-sb-validations="required" />
-                                <label for="name">Ваше повне ім`я</label>
-                            </div>
-                            <!-- Email address input-->
-                            <div class="form-floating mb-3">
-                                <input class="form-control" id="email" type="email" placeholder="name@example.com" data-sb-validations="required,email" />
-                                <label for="email">Пошта</label>
-                            </div>
-                            <!-- Message input-->
-                            <div class="form-floating mb-3">
-                                <textarea class="form-control" type="text" placeholder="Введіть ваш відгук..." style="height: 10rem" ></textarea>
-                                <label for="message">Відгук</label>
-                            </div>
-                            <!-- Submit success message-->
-                            <!---->
-                            <!-- This is what your users will see when the form-->
-                            <!-- has successfully submitted-->
-                            <div class="d-none" id="submitSuccessMessage">
-                                <div class="text-center mb-3">
-                                    <div class="fw-bolder">Form submission successful!</div>
-                                    To activate this form, sign up at
-                                    <br />
-                                </div>
-                            </div>
-                            <div class="d-none" id="submitErrorMessage"><div class="text-center text-danger mb-3">Error sending message!</div></div>
-                            <div class="d-grid"><button class="btn btn-primary btn-lg disabled" id="submitButton" type="submit">Submit</button></div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </section>*/
 }

@@ -10,6 +10,7 @@
 
     <link href="css/app.css" rel="stylesheet" />
     <link href="_content/Blazored.Toast/blazored-toast.min.css" rel="stylesheet" />
+    <link href='https://fonts.googleapis.com/css?family=Average Sans' rel='stylesheet'>
 </head>
 
 <body>
@@ -24,6 +25,7 @@
     <script src="lib/bootstrap/dist/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.6.0/umd/popper.min.js" integrity="sha512-BmM0/BQlqh02wuK5Gz9yrbe7VyIVwOzD1o40yi1IsTjriX/NGF37NyXHfmFzIlMmoSIBXgqDiG1VNU6kB5dBbA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+
     <script>
         window.downloadFileFromStream = async (fileName, contentStreamReference) => {
             const arrayBuffer = await contentStreamReference.arrayBuffer();
@@ -36,6 +38,17 @@
             anchorElement.remove();
             URL.revokeObjectURL(url);
         }
+    </script>
+    <script>
+        $(document).ready(function () {
+            $("#myCarousel").on("swipeleft", function () {
+                $(this).carousel("next");
+            });
+
+            $("#myCarousel").on("swiperight", function () {
+                $(this).carousel("prev");
+            });
+        });
     </script>
 </body>
 </html>
