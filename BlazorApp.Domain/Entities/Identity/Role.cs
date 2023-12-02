@@ -6,6 +6,6 @@
         public const string Admin = "Admin";
         public const string SuperAdmin = "SuperAdmin";
 
-        public const string Admins = Admin + ", " + SuperAdmin;
+        public const string Admins = Admin + "," + SuperAdmin;
     }
 }

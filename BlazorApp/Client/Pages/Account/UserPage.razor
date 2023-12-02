@@ -6,6 +6,11 @@
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject NavigationManager Nv
+<style>
+    body{
+        background: #FBF9FD;
+    }
+</style>
 <section>
   <div class="container py-5">
     <div class="row">
@@ -33,7 +38,7 @@
         <div class="card mb-4 mb-lg-0">
           <div class="card-body p-0">
             <div class="list-group">
-              <a href="results" class="list-group-item list-group-item-action">Ваші результати</a>
+              <a href="usercourses" class="list-group-item list-group-item-action">Ваші результати</a>
               <a class="list-group-item list-group-item-action" @onclick="mainLayout.Logout">Вийти<i class="oi oi-account-logout"></i></a>
             </div>
           </div>
@@ -152,7 +157,7 @@
     [CascadingParameter]
     public MainLayout mainLayout { get; set; }
     private List<UserResultResponse> _results { get; set; } = new List<UserResultResponse>();
-    private UserRoleResponse? _profile { get; set; } = new UserRoleResponse();
+    private UserRoleResponseModel? _profile { get; set; } = new UserRoleResponseModel();
     private bool _isEditing = false;
     private bool isException = false;
 
@@ -171,7 +176,7 @@
 
     public async Task DeleteAccount()
     {
-        await Http.DeleteAsync("profile/delete");
+        await Http.DeleteAsync("api/v1/profile/delete");
         await mainLayout.Logout();
         Nv.NavigateTo("/");
 
@@ -180,8 +185,8 @@
     public async Task EditProfile()
     {
         var postBody = new ProfileRequest() { FirstName = _profile.FirstName, LastName = _profile.LastName };
-        using var resposne = await Http.PostAsJsonAsync($"profile/edit", postBody);
-        var _model = await resposne.Content.ReadFromJsonAsync<UserRoleResponse>();
+        using var resposne = await Http.PostAsJsonAsync($"api/v1/profile/edit", postBody);
+        var _model = await resposne.Content.ReadFromJsonAsync<UserRoleResponseModel>();
         _profile = _model;
 
         string json = JsonSerializer.Serialize(_profile);

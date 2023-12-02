@@ -1,23 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
-
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
-
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'BlazorApp' ">
     <ExternalConsole>true</ExternalConsole>
   </PropertyGroup>
   <ItemGroup>
+    <Content Remove="Pages\Admin\Course.razor" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Blazored.Toast" Version="3.2.2" />
     <PackageReference Include="Blazorise.Bootstrap5" Version="1.1.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="5.0.7" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="5.0.7" PrivateAssets="all" />
-    <PackageReference Include="System.Net.Http.Json" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="6.0.22" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="6.0.22" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
+    <PackageReference Include="System.Net.Http.Json" Version="6.0.1" />
   </ItemGroup>
-
   <ItemGroup>
     <None Remove="Microsoft.Extensions.Http" />
     <None Remove="Microsoft.Extensions.DependencyInjection.Abstractions" />
@@ -28,6 +28,7 @@
     <Folder Include="Components\" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Pages\Course.razor" />
     <None Include="wwwroot\css\bootstrap\bootstrap.min.css.map" />
     <None Include="wwwroot\css\open-iconic\FONT-LICENSE" />
     <None Include="wwwroot\css\open-iconic\font\fonts\open-iconic.svg" />
@@ -37,5 +38,15 @@
   <ItemGroup>
     <ProjectReference Include="..\Shared\BlazorApp.Shared.csproj" />
   </ItemGroup>
-  <ProjectExtensions><VisualStudio><UserProperties wwwroot_4lib_4bootstrap_4package_1json__JsonSchema="" /></VisualStudio></ProjectExtensions>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties wwwroot_4lib_4bootstrap_4package_1json__JsonSchema="" />
+    </VisualStudio>
+  </ProjectExtensions>
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Pages\Admin\Course.razor" />
+  </ItemGroup>
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="Pages\Admin\Course.razor" />
+  </ItemGroup>
 </Project>

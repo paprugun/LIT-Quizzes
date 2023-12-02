@@ -4,9 +4,13 @@
 @layout AdminLayout
 @inject IJSRuntime JS
 @using BlazorApp.Client.Shared.Pagination
-@using BlazorApp.Models.ResponseModels.User
+@using BlazorApp.Shared.Models.Enums;
+@using BlazorApp.Shared.Models.RequestModels.Pagination;
+@using BlazorApp.Shared.Models.ResponseModel.Pagination;
 @using BlazorApp.Shared.Models.ResponseModel.Session
 @using System.Text.Json
+@using BlazorApp.Shared.Models.ResponseModel.User;
+@using Newtonsoft.Json;
   <table class="table table-hover">
       <thead>
         <div class="container h-100">
@@ -24,7 +28,7 @@
             </div>
         </div>
         <br/>
-        <input class="form-check-input" type="checkbox" @onchange="()=>RefreshTable(!_getAdmins)">
+        <input class="form-check-input" type="checkbox" @onchange="()=>RefreshTable(new PaginationRequestModel<UserTableColumn>(), !_getAdmins)">
         <label class="form-check-label">
             Відображати адмінів
         </label>
@@ -33,12 +37,11 @@
           <th scope="col">Ім`я</th>
           <th scope="col">Пошта</th>
           <th scope="col">Статус</th>
-          <th scope="col">Роль</th>
           <th scope="col">Налаштування</th>
         </tr>
       </thead>
       <tbody class="table-group-divider">
-        @foreach (var item in _usersPerPage)
+        @foreach (var item in _allUsers)
         {
             <tr>
                 <th scope="col">@item.Id</th>
@@ -52,15 +55,10 @@
                 {
                     <th scope="col">[Активний]</th>
                 }       
-                @if (item.Role == "User")
+                @if (!item.Email.Contains("admin"))
                 {
-                    <th scope="col"><span class="badge rounded-pill bg-info">Юзер</span></th>
+                    <th scope="col"><button class="btn btn-primary oi oi-pencil" style="margin-left:25px" @onclick="() => UserInfo(item.Id)"></button></th>
                 }
-                else
-                {
-                    <th scope="col"><span class="badge rounded-pill bg-danger">Адмін</span></th>
-                }
-                <th scope="col"><button class="btn btn-primary oi oi-pencil" style="margin-left:25px" @onclick="() => UserInfo(item.Id)"></button><button class="btn btn-danger oi oi-trash" style="margin-left:5px" @onclick="() => DeleteUser(item.Id)"></button></th>
             </tr>
         }
     </tbody>
@@ -79,17 +77,32 @@
     [CascadingParameter]
     PageIndexStateProvider State { get; set; }
 
-    private List<UserRoleResponse> _allUsers = null;
-    private List<UserRoleResponse> _usersPerPage = new List<UserRoleResponse>();
+    private List<UserTableRowResponseModel> _allUsers = new List<UserTableRowResponseModel>();
 
     #region additional props
+
+    bool _getAdmins;
+
+    private bool _showTxtBox;
+    private string json { get; set; }
+    string errStr = String.Empty;
+
+    bool _showQuizModal = false;
     private string _filter = String.Empty;
-    private bool _getAdmins = false;
 
+    private int _offset = 0;
     private int _itemsPerPage = 10;
-    private int _totalPages = 1;
+    private int _totalPages = 0;
     #endregion
-
+    private async Task SelectedPage(int selectedPageIndex)
+    {
+        if (_allUsers != null)
+        {
+            State.PageIndex = selectedPageIndex;
+            _offset = _offset * (State.PageIndex - 1);
+            await RefreshTable(new PaginationRequestModel<UserTableColumn>() { Offset = _offset, Limit = _itemsPerPage, Search = _filter }, _getAdmins);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -99,80 +112,40 @@
         }
         else
         {
-            using var resposne = await Http.GetAsync($"adminusers/getUsers");
-            var users = await resposne.Content.ReadFromJsonAsync<IEnumerable<UserRoleResponse>>();
-            _allUsers = users.ToList();
-            await RefreshPagination();
-        }
-
-    }
-
-    public async Task RefreshPagination()
-    {
-        if (_allUsers != null)
-        {
-            // Initialize the number of "totalPages"
-            _totalPages = (int)Math.Ceiling(double.Parse(_allUsers.Count.ToString()) / _itemsPerPage);
-
-            // Initialize the "item" which will be displayed when the page loaded first time.
-            var skipcount = _itemsPerPage * (State.PageIndex - 1);
-            _usersPerPage = _allUsers.Skip(_itemsPerPage * (State.PageIndex - 1)).Take(_itemsPerPage).ToList();
-
+            State.PageIndex = 1;
+            await RefreshTable(new PaginationRequestModel<UserTableColumn>(), _getAdmins);
         }
     }
 
-    private void SelectedPage(int selectedPageIndex)
-    {
-        if (_allUsers != null)
-        {
-            State.PageIndex = selectedPageIndex;
-            var skipcount = _itemsPerPage * (State.PageIndex - 1);
-            _usersPerPage = _allUsers.Skip(_itemsPerPage * (State.PageIndex - 1)).Take(_itemsPerPage).ToList();
-        }
-    }
-
-    public async Task SetFilteredPagination()
-    {
-        State.PageIndex = 1;
-        _totalPages = (int)Math.Ceiling(double.Parse(_usersPerPage.Count.ToString()) / _itemsPerPage);
-    }
 
     public async Task Search()
     {
-        var filteredList = _allUsers.FindAll(x => x.FirstName.Contains(_filter, StringComparison.OrdinalIgnoreCase) || 
-                                            x.LastName.Contains(_filter, StringComparison.OrdinalIgnoreCase) || 
-                                            x.Email.Contains(_filter, StringComparison.OrdinalIgnoreCase));
-
-        _usersPerPage = filteredList.Take(_itemsPerPage).ToList();
-        await SetFilteredPagination();   
+        State.PageIndex = 1;
+        await RefreshTable(new PaginationRequestModel<UserTableColumn>() { Offset = 0, Search = _filter, Limit = _itemsPerPage }, _getAdmins);
     }
 
     public async Task CleanFilters()
     {
         _filter = String.Empty;
-        await RefreshPagination();
+        State.PageIndex = 1;
+        await RefreshTable(new PaginationRequestModel<UserTableColumn>(), _getAdmins);
     }
 
-    public async Task RefreshTable(bool getAdmins)
+    public async Task RefreshTable(PaginationRequestModel<UserTableColumn> model, bool getAdmins)
     {
-        var resposne = new HttpResponseMessage();
-
-        if(getAdmins)
-            resposne = await Http.GetAsync($"adminusers/getAll");
-        else
-            resposne = await Http.GetAsync($"adminusers/getUsers");
-
-        var users = await resposne.Content.ReadFromJsonAsync<IEnumerable<UserRoleResponse>>();
-        _allUsers = users.ToList();
+        var resposne = await Http.PostAsJsonAsync($"api/v1/admin-users/?getAdmins={getAdmins}", model);
+        var _model = JsonConvert.DeserializeObject<JsonPaginationResponse<List<UserTableRowResponseModel>>>(await resposne.Content.ReadAsStringAsync());
+        _allUsers = _model.Data;
+        _itemsPerPage = model.Limit;
+        _offset = _model.Pagination.NextOffset;
+        _totalPages = (int)Math.Ceiling(double.Parse(_model.Pagination.TotalCount.ToString()) / _itemsPerPage);
         _getAdmins = getAdmins;
-        await RefreshPagination();
     }
 
     public async Task DeleteUser(int userId)
     {
-        await Http.DeleteAsync($"adminusers/hard/{userId}");
-        _allUsers.Remove(_allUsers.FirstOrDefault(x => x.Id == userId));
-        await RefreshPagination();
+        await Http.DeleteAsync($"api/v1/admin-users/{userId}");
+        await RefreshTable(new PaginationRequestModel<UserTableColumn>(), _getAdmins);
     }
 
     public void UserInfo(int userId)

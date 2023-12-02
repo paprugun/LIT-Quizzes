@@ -1,7 +1,6 @@
 ﻿using BlazorApp.DAL.Abstract;
 using BlazorApp.Domain.Entities.Identity;
 using BlazorApp.Domain.Entities.QuizEntities;
-using BlazorApp.Domain.Entities.QuizEntities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -23,10 +22,14 @@ namespace BlazorApp.DAL
         public virtual DbSet<ApplicationUserRole> AspNetUserRoles { get; set; }
         public virtual DbSet<UserChangeRequest> UserChangeRequests { get; set; }
 
+        public virtual DbSet<Course> Courses { get; set; }
+        public virtual DbSet<Topic> Topics { get; set; }
         public virtual DbSet<Quiz> Quizzes { get; set; }
         public virtual DbSet<QuizQuestion> QuizQuestions { get; set; }
         public virtual DbSet<QuizAnswer> QuizAnswers { get; set; }
         public virtual DbSet<UsersResults> UsersResults { get; set; }
+        public virtual DbSet<CoursesQuizzes> CoursesQuizzes { get; set; }
+        public virtual DbSet<UsersCourses> UsersCourses { get; set; }
 
         #region DbSet for stored procedures
 

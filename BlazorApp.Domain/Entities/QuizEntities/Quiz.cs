@@ -21,10 +21,17 @@ namespace BlazorApp.Domain.Entities.QuizEntities
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; }
 
-        [InverseProperty("Quiz")]
-        public virtual ICollection<UsersResults> Users { get; set; }
-         
+        [ForeignKey("TopicId")]
         [InverseProperty("Quizzes")]
         public virtual Topic Topic { get; set; }
+
+        [InverseProperty("Quiz")]
+        public virtual ICollection<CoursesQuizzes> Courses { get; set; }
+
+        [InverseProperty("Quiz")]
+        public virtual ICollection<QuizQuestion> Questions { get; set; }
+
+        [InverseProperty("Quiz")]
+        public virtual ICollection<UsersResults> Users { get; set; }
     }
 }
