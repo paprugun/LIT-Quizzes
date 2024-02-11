@@ -3,20 +3,22 @@ using BlazorApp.Common.Extensions;
 using BlazorApp.Common.Utilities.Interfaces;
 using BlazorApp.DAL.Abstract;
 using BlazorApp.Domain.Entities.Identity;
+using BlazorApp.Models.Enums;
 using BlazorApp.Models.RequestModels;
 using BlazorApp.Models.ResponseModels.Session;
 using BlazorApp.Services.Interfaces;
-using BlazorApp.Services.Interfaces.Utilities;
 using BlazorApp.Shared.Models.RequestModels;
 using BlazorApp.Shared.Models.ResponseModel.Session;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -28,8 +30,8 @@ namespace BlazorApp.Services.Services
         private readonly IHashUtility _hashUtility;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IJWTService _jwtService;
+        private readonly IEmailService _emailService;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ILocalStorageService<UserRoleResponse> _localStorage;
 
         private bool _isUserSuperAdmin = false;
         private bool _isUserAdmin = false;
@@ -42,14 +44,14 @@ namespace BlazorApp.Services.Services
             IHttpContextAccessor httpContextAccessor,
             IServiceProvider serviceProvider,
             IConfiguration configuration,
-            ILocalStorageService<UserRoleResponse> localStorageService)
+            IEmailService emailService)
         {
             _userManager = userManager;
             _hashUtility = hashUtility;
             _unitOfWork = unitOfWork;
             _jwtService = jwtService;
+            _emailService = emailService;
             _httpContextAccessor = httpContextAccessor;
-            _localStorage = localStorageService;
 
             var context = httpContextAccessor.HttpContext;
 
@@ -67,18 +69,19 @@ namespace BlazorApp.Services.Services
                     _userId = null;
                 }
             }
+
         }
 
         public async Task<RegisterResponseModel> Register(RegisterRequestModel model)
         {
             model.Email = model.Email.Trim().ToLower();
             
-            ApplicationUser user = _unitOfWork.Repository<ApplicationUser>().Find(x => x.Email.ToLower() == model.Email);
+            ApplicationUser user = _unitOfWork.Repository<ApplicationUser>().Get(x => x.Email.ToLower() == model.Email).Include(w => w.Profile).FirstOrDefault();
 
             if (user != null && user.EmailConfirmed)
                 throw new CustomException(HttpStatusCode.UnprocessableEntity, "email", "Email is already registered");
 
-            if (user == null)
+            if (user == null || !user.EmailConfirmed)
             {
                 user = new ApplicationUser
                 {
@@ -86,7 +89,7 @@ namespace BlazorApp.Services.Services
                     UserName = model.Email,
                     IsActive = true,
                     RegistratedAt = DateTime.UtcNow,
-                    EmailConfirmed = true
+                    EmailConfirmed = false
                 };
 
                 user.Profile = new Profile();
@@ -103,6 +106,27 @@ namespace BlazorApp.Services.Services
                 if (!result.Succeeded)
                     throw new CustomException(HttpStatusCode.BadRequest, "general", result.Errors.FirstOrDefault().Description);
 
+                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                var encodeToken = Encoding.UTF8.GetBytes(token);
+                var validToken = WebEncoders.Base64UrlEncode(encodeToken);
+                var url = $"{_httpContextAccessor.HttpContext.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host.Value}/confirm-email?token={validToken}";
+                var userRequest = new UserChangeRequest()
+                {
+                    TokenHash = _hashUtility.GetHash(validToken),
+                    ChangeRequestType = ChangeRequestType.ConfirmEmail,
+                    UserId = user.Id,
+                };
+
+                user.UserChangeRequests.Add(userRequest);
+                _unitOfWork.Repository<ApplicationUser>().Update(user);
+                _unitOfWork.SaveChanges();
+
+                await _emailService.Send(new MailRequestModel()
+                {
+                    Addressee = user.Email,
+                    Body = $"<p>Confirm email by clicking the link<a href=\"{url}\">Confirm</a></p>",
+                    Subject = "Email Confirmation",
+                });
             }
 
             return new RegisterResponseModel { Email = user.Email };
@@ -150,10 +174,9 @@ namespace BlazorApp.Services.Services
         {
             var user = _unitOfWork.Repository<ApplicationUser>().Get(x => x.Email == model.Email)
                 .Include(x => x.Profile)
-                    .ThenInclude(w => w.User)
                 .Include(x => x.UserRoles)
                     .ThenInclude(x => x.Role)
-                    .FirstOrDefault();
+                .FirstOrDefault();
 
             if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password) || !user.UserRoles.Any(x => x.Role.Name == Role.User))
                 throw new CustomException(HttpStatusCode.BadRequest, "credentials", "Invalid credentials");
@@ -185,7 +208,7 @@ namespace BlazorApp.Services.Services
             return await _jwtService.BuildLoginResponse(user, model.AccessTokenLifetime);
         }
 
-        public async Task<TokenResponseModel> RefreshTokenAsync(string refreshToken, List<string> roles)
+        public async Task<Models.ResponseModels.Session.TokenResponseModel> RefreshTokenAsync(string refreshToken, List<string> roles)
         {
             var token = _unitOfWork.Repository<UserToken>().Get(w => w.RefreshTokenHash == _hashUtility.GetHash(refreshToken) && w.IsActive && w.RefreshExpiresDate > DateTime.UtcNow)
                 .TagWith(nameof(RefreshTokenAsync) + "_GetRefreshToken")

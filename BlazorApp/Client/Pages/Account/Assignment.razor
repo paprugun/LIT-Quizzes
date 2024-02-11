@@ -1,0 +1,62 @@
+﻿@page "/assignment/{Id:int}"
+@using BlazorApp.Shared.Models.ResponseModel.Pagination;
+@using BlazorApp.Shared.Models.ResponseModel.Quiz;
+@using Newtonsoft.Json;
+@using BlazorApp.Shared.Models.ResponseModel.Course;
+@inject HttpClient Http
+@inject NavigationManager Nv
+
+<style>
+    body {
+        background: #FBF9FD;
+    }
+</style>
+@if (_assingment == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="container d-flex justify-content-center align-items-center">
+        <div class="card">
+            <div class="card-header">
+                @_assingment.CourseName
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    @foreach (var video in _assingment.ContentURLs.Split(" "))
+                    {
+                        <li class="list-group-item" aria-disabled="true" @onclick='() => Nv.NavigateTo(video)'>Урок @(_assingment.ContentURLs.Split(" ").ToList().IndexOf(video)+1)</li>
+                    }
+                </ul>
+                <br/>
+                <h6>Не пройдені тести:</h6>
+                @foreach (var quiz in _assingment.NotFinishedQuizzes)
+                {
+                    <a @onclick='() => Nv.NavigateTo($"passQuiz/{quiz.Item1}")' class="btn btn-primary">@quiz.Item2</a>
+                }
+                <br/>
+                <h6>Пройдені тести:</h6>
+                @foreach (var result in _assingment.Results)
+                {
+                    <a class="btn btn-primary" @onclick='() => Nv.NavigateTo($"resultPage/{result.Id}")'>@result.QuizName</a> <h6>@result.CountOfCorrectAnswers / @(result.CountOfIncorrectAnswers+result.CountOfCorrectAnswers)</h6>;
+                }
+            </div>
+        </div>
+    </div>
+
+
+}
+@code {
+
+    [Parameter]
+    public int Id { get; set; } = 0;
+
+    AssignmentResponseModel _assingment = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var response = await Http.GetAsync($"api/v1/courses/get-assingment/{Id}");
+        _assingment = JsonConvert.DeserializeObject<JsonResponse<AssignmentResponseModel>>(await response.Content.ReadAsStringAsync()).Data;
+    }
+}

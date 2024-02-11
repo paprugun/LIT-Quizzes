@@ -49,11 +49,11 @@
          }
       </tbody>
       <tfoot>
-        <Pagination TotalPages="@(_totalPages != 0 ? _totalPages : 1)"
+        <MyPagination TotalPages="@(_totalPages != 0 ? _totalPages : 1)"
                     PageIndex="@State.PageIndex"
                     Radius="3"
                     OnSelectedPage="@SelectedPage">
-        </Pagination>
+        </MyPagination>
       </tfoot>
     </table>
 @code {
@@ -81,7 +81,7 @@
         }
         else
         {
-            using var resposne = await Http.GetAsync($"topics/");
+            using var resposne = await Http.GetAsync($"api/v1/topics");
             var topics = await resposne.Content.ReadFromJsonAsync<IEnumerable<TopicResponse>>();
             _topics = topics.ToList();
             await RefreshPagination(); 
@@ -128,14 +128,14 @@
 
     private async Task DeleteTopic(int id)
     {
-        await Http.DeleteAsync($"admintopics/{id}");
+        await Http.DeleteAsync($"api/v1/admintopics/{id}");
         _topics.Remove(_topics.FirstOrDefault(x => x.Id == id));
         await RefreshPagination();
     }
 
     private async Task CreateTopic()
     {
-        using var response = await Http.GetAsync($"admintopics/{_topicRequest}");
+        using var response = await Http.GetAsync($"api/v1/admintopics/{_topicRequest}");
         var topic = await response.Content.ReadFromJsonAsync<TopicResponse>();
         _topics.Add(topic);
         await RefreshPagination();

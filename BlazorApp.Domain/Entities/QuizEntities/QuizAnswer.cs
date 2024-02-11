@@ -10,10 +10,13 @@ namespace BlazorApp.Domain.Entities.QuizEntities
     public class QuizAnswer : IEntity
     {
         public int Id { get; set; }
+        public int QuestionId { get; set; }
         public string Text { get; set; }
         public bool IsCorrect { get; set; }
         public DateTime CreatedAt { get; set; }
-        public int QuestionId { get; set; }
+
+        [InverseProperty("Answers")]
+        public virtual QuizQuestion Question { get; set; }
 
     }
 }

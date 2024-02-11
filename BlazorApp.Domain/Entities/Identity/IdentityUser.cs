@@ -61,6 +61,9 @@ namespace BlazorApp.Domain.Entities.Identity
         [InverseProperty("User")]
         public virtual ICollection<UsersResults> QuizzesResults { get; set; }
 
+        [InverseProperty("User")]
+        public virtual ICollection<UsersCourses> Courses { get; set; }
+
         #endregion
 
         #region Additional Properties

@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 namespace BlazorApp.Shared.Models.ResponseModel.Pagination
 {
-    internal class JsonPaginationResponseModel<T> : JsonResponseModel<T> where T : class
+    public class JsonPaginationResponse<T> : JsonResponse<T> where T : class
     {
-        public JsonPaginationResponseModel(T newdata, int nextOffset, int totalCount)
+        public JsonPaginationResponse(T newdata, int nextOffset, int totalCount)
             : base(newdata)
         {
-            Pagination = new Pagination
+            Pagination = new PaginationModel
             {
                 NextOffset = nextOffset,
                 TotalCount = totalCount
@@ -21,10 +21,10 @@ namespace BlazorApp.Shared.Models.ResponseModel.Pagination
 
         [JsonRequired]
         [JsonProperty("pagination")]
-        public Pagination Pagination { get; set; }
+        public PaginationModel Pagination { get; set; }
     }
 
-    public class Pagination
+    public class PaginationModel
     {
         /// <summary>
         /// request offset + length of returned array

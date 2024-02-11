@@ -35,10 +35,6 @@
     [Parameter]
     public ModalDialogType DialogType { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    {
-    }
-
     private Task ModalCancel()
     {
         return OnClose.InvokeAsync(false);

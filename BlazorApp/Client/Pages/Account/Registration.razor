@@ -1,90 +1,132 @@
 ﻿@page "/register"
-@using BlazorApp.Models.ResponseModels.User
+@using BlazorApp.Client.Services;
 @using BlazorApp.Shared.Models.RequestModels.User
+@using BlazorApp.Shared.Models.ResponseModel.Pagination
 @using BlazorApp.Shared.Models.ResponseModel.Session
 @using System.Text.Json
 @using BlazorApp.Shared.Models.ResponseModel.User
+@using Newtonsoft.Json
 @inject HttpClient Http
 @inject NavigationManager nv
 @inject IJSRuntime JS
 @layout EmptyLayout
-<button @onclick="Back" class="btn btn-outline-dark oi oi-arrow-left"></button>
-<br/>
-@if(isRegistrationSuccess)
-{
-    <div class="alert alert-dismissible alert-success">
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-         <strong>Регістрація успішна </strong><a href="">@_user.Email</a>
-    </div>
-}
-@if (errStr != "")
-{
-    <div class="alert alert-dismissible alert-danger">
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-         <strong>Помилка </strong><a href=""> @errStr</a>
-    </div>
-}
-<style>
-	.card{
-    width:400px;
-    border:none;
+@inject IAccountService AccountService
+<div class="px-4" style="background: url(https://c.stocksy.com/a/k8xA00/z9/2610618.jpg) no-repeat; background-size:cover; overflow:hidden">
+    <button @onclick="Back" class="btn btn-outline-dark oi oi-arrow-left"></button>
+    <br />
     
-}
 
-.form-control{
-    height:45px;
-    border-radius:10px;
-}
-
-.form-control:focus{
-    box-shadow:none;
-}
-
-
-.btn-signup{
-    height:50px;
-    border-radius:10px;
-}
-}
-</style>
-<div class="container-fluid d-flex justify-content-center align-items-center h-100" style="margin-top: 20px">
-    <div class="card p-3 text-center py-4">
-        <EditForm EditContext="@editContext">
-            <DataAnnotationsValidator />
-
-        <h4>Створити акааунт</h4>
-        <div>
-            <span>Вже маєте аккаунт? тоді повертайтесь на</span>
-            <a href="#" class="text-decoration-none">головну строніку</a>
-            <span>і авторизовуйтесь</span>
+    <div class="row">
+        <div class="col-lg-6 d-flex align-items-center justify-content-center">
+            <div class="d-flex flex-row">
+                <h2 class="me-3" style="font-size: 3rem; color: white; font-weight: 300; margin-bottom:0.3rem;">ITEXPERT</h2>
+                <div class="logo-slash me-3">/</div>
+                <strong style="font-size: 1.5rem; color: white; font-weight: 700; margin-top:0.3rem;">ITEXPERT Digital Platform</strong>
+            </div>
         </div>
-        <div class="input-group px-3 mt-3">
-            <InputText type="text" class="form-control" placeholder="Ім`я" aria-label="firstname" @bind-Value="_registerModel.FirstName"></InputText>
-            <span></span>
-            <InputText type="text" class="form-control" placeholder="Прізвище" aria-label="lastname" @bind-Value="_registerModel.LastName"></InputText>
-        </div>
-        <div class="mt-3 px-3">
-            <InputText class="form-control" placeholder="Ваша пошта" @bind-Value="_registerModel.Email"></InputText>
-            <ValidationMessage For="@(() => _registerModel.Email)"></ValidationMessage>
-        </div>
-        <div class="mt-3 px-3">
-            <InputText class="form-control" placeholder="Пароль" type="password" @bind-Value="_registerModel.Password"></InputText>
-            <ValidationMessage For="@(() => _registerModel.Password)"></ValidationMessage>
+        <div class="col-lg-6">
+            <div class="card px-4">
+                <div style="margin-top: 20px">
+                    <h1 style="color: #282A68" class="text-center"><b>Вітаємо в ІТEXPERT</b></h1>
+                    @if (isRegistrationSuccess)
+                    {
+                        <div class="alert alert-dismissible alert-success">
+                            <strong>Регістрація успішна! Активуйте ваш аккаунт за посиланням на пошті. </strong><a href="">@_user.Email</a>
+                        </div>
+                    }
+                    @if (errStr != "")
+                    {
+                        <div class="alert alert-dismissible alert-danger">
+                            <button type="button" class="btn-close" @onclick="() => errStr = String.Empty"></button>
+                            <strong>Помилка </strong><a href=""> @errStr</a>
+                        </div>
+                    }
+                    <div class="container-fluid d-flex justify-content-center align-items-center h-100">
+                        <div class="card p-3 text-center py-4">
+                            <EditForm EditContext="@editContext">
+                                <DataAnnotationsValidator />
 
-        </div>
-        <div class="mt-3 px-3">
-            <InputText class="form-control" placeholder="Підтвердити пароль" type="password" @bind-Value="_registerModel.ConfirmPassword"></InputText>
-            <ValidationMessage For="@(() => _registerModel.ConfirmPassword)"></ValidationMessage>
+                                <div class="input-group px-3 mt-3">
+                                    <InputText type="text" class="form-control" placeholder="Ім`я" aria-label="firstname" @bind-Value="_registerModel.FirstName"></InputText>
+                                    <span></span>
+                                    <InputText type="text" class="form-control" placeholder="Прізвище" aria-label="lastname" @bind-Value="_registerModel.LastName"></InputText>
+                                </div>
+                                <div class="mt-3 px-3">
+                                    <InputText class="form-control" placeholder="Ваша пошта" @bind-Value="_registerModel.Email"></InputText>
+                                    <ValidationMessage For="@(() => _registerModel.Email)"></ValidationMessage>
+                                </div>
+                                <div class="mt-3 px-3">
+                                    <InputText class="form-control" placeholder="Пароль" type="password" @bind-Value="_registerModel.Password"></InputText>
+                                    <ValidationMessage For="@(() => _registerModel.Password)"></ValidationMessage>
 
+                                </div>
+                                <div class="mt-3 px-3">
+                                    <InputText class="form-control" placeholder="Підтвердити пароль" type="password" @bind-Value="_registerModel.ConfirmPassword"></InputText>
+                                    <ValidationMessage For="@(() => _registerModel.ConfirmPassword)"></ValidationMessage>
+
+                                </div>
+                                <div class="mt-3 d-grid px-3">
+                                    <button class="btn-signup text-uppercase" @onclick="Register">
+                                        <h2 class="m-2">Реєстрація</h2>
+                                    </button>
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="mt-3 d-grid px-3">
-            <button class="btn btn-primary btn-block btn-signup text-uppercase" @onclick="Register">
-                <span>Регестрація</span>
-            </button>
-        </div>
-        </EditForm>
     </div>
-</div> 
+</div>
+
+<style>
+    .card {
+        width: 400px;
+        border: none;
+        padding: 4px, 4px, 4px, 4px;
+    }
+
+    .form-control {
+        height: 45px;
+        border-radius: 10px;
+    }
+
+        .form-control:focus {
+            box-shadow: none;
+        }
+
+
+        
+    .btn-signup {
+        background-color:white;
+        height: 50px;
+        border: 0;
+        font-weight: 700;
+        font-family: Average Sans;
+        border-radius: 5px;
+        color: #282A68;
+        transition: background-color 0.3s, color 0.3s; /* Плавный переход цвета */
+    }
+
+        .btn-signup:hover {
+            background-color: #282A68;
+            color: white;
+        }
+
+    .row {
+        height: 100vh;
+        width: 100vw;
+    }
+
+    .logo-slash {
+        font-weight: 900;
+        color: #282A68;
+        vertical-align: text-bottom;
+        font-size: 60px;
+        letter-spacing: 0;
+        margin-top: -0.3em;
+    }
+</style>
 
 @code {
     [CascadingParameter]
@@ -105,31 +147,30 @@
     public async Task Register()
     {
         var model = _registerModel;
-        try
+        if (editContext != null && editContext.Validate())
         {
-            if (editContext != null && editContext.Validate())
+            using var response = await Http.PostAsJsonAsync("api/v1/users", model);
+            if (!response.IsSuccessStatusCode)
             {
-                using var response = await Http.PostAsJsonAsync("account/register", _registerModel);
-                var _model = await response.Content.ReadFromJsonAsync<RegistrationResponse>();
-                _user = _model;
+                var errorModel = JsonConvert.DeserializeObject<ErrorResponseModel>(await response.Content.ReadAsStringAsync());
+                foreach (var item in errorModel.Errors)
+                {
+                    errStr = item.Message;
+                }
+            }
+            else
+            {
+                var _model = JsonConvert.DeserializeObject<JsonResponse<RegistrationResponse>>(await response.Content.ReadAsStringAsync());
+                _user = _model.Data;
                 isRegistrationSuccess = true;
             }
         }
-        catch (Exception ex)
-        {
-            Layout.Procces(ex);
-            if (_user.Email != _registerModel.Email)
-                errStr = "Ця пошта вже була зарегестрована, перевірте введені данні";
-            else
-                errStr = ex.Message;
 
-            StateHasChanged();
-        }
-        
     }
 
     public void Back()
     {
         nv.NavigateTo("/");
     }
+
 }

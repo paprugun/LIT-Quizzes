@@ -28,9 +28,7 @@ using BlazorApp.Common.Constants;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.CookiePolicy;
-using BlazorApp.Services.Interfaces.Utilities;
 using BlazorApp.Shared.Models.ResponseModel.Session;
-using BlazorApp.Services.Services.Utilities;
 using Microsoft.JSInterop;
 using Blazored.LocalStorage;
 using Blazored.Toast;
@@ -38,15 +36,40 @@ using Blazored.Toast.Services;
 using Microsoft.AspNetCore.Components;
 using BlazorApp.Services.Services.PageServices;
 using BlazorApp.Services.Interfaces.PageServices;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Filters;
+using System.Collections.Generic;
+using BlazorApp.Server.Helpers.SwaggerFilters;
+using Microsoft.Extensions.PlatformAbstractions;
+using System.IO;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
+using Stripe;
+using BlazorApp.Services.Interfaces.CourseServices;
+using BlazorApp.Services.Services.CourseServices;
+using BlazorApp.Common.Exceptions;
+using BlazorApp.Models.ResponseModels;
+using BlazorApp.ResourceLibrary;
+using BlazorApp.Server.Helpers;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.Extensions.Localization;
+using Newtonsoft.Json;
+using OfficeOpenXml.FormulaParsing.Logging;
 
 namespace BlazorApp.Server
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
+            _env = env;
+
         }
+
+        private readonly IWebHostEnvironment _env;
 
         public IConfiguration Configuration { get; }
 
@@ -56,7 +79,7 @@ namespace BlazorApp.Server
         {
             services.AddDbContext<DataContext>(options =>
             {
-                options.UseNpgsql(Configuration.GetConnectionString("Connection"));
+                options.UseSqlite(Configuration.GetConnectionString("Connection"));
                 options.EnableSensitiveDataLogging(false);
             });
 
@@ -71,6 +94,7 @@ namespace BlazorApp.Server
                 options.Password.RequireUppercase = false;
                 options.Password.RequireLowercase = false;
                 options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+#=";
+                options.SignIn.RequireConfirmedEmail = true;
             }).AddEntityFrameworkStores<DataContext>().AddDefaultTokenProviders();
 
             services.Configure<DataProtectionTokenProviderOptions>(o =>
@@ -88,22 +112,19 @@ namespace BlazorApp.Server
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IJWTService, JWTService>();
-            services.AddScoped<ILocalStorageService<UserRoleResponse>, UserLocalStorageService>();
-            services.AddTransient<IAccountService, AccountService>();
+            services.AddTransient<IAccountService, Services.Services.AccountService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IQuizAdminService, QuizAdminService>();
             services.AddScoped<IQuizUserService, QuizUserService>();
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<ITopicsService, TopicsService>();
             services.AddScoped<IResultsService, ResultService>();
+            services.AddScoped<ICourseService, CourseService>();
+            services.AddScoped<IUserCourseService, UserCourseService>();
+            services.AddScoped<IEmailService, EmailService>();
 
             //pages services
-            services.AddScoped<IHomePageService, HomePageService>();
-            services.AddScoped<ICatalogPageService, CatalogPageService>();
             services.AddScoped<IAdminPageService, AdminPageService>();
-
-            services.AddBlazoredLocalStorage();
-            services.AddBlazoredToast();
 
             services.AddControllersWithViews();
             services.AddRazorPages();
@@ -165,7 +186,51 @@ namespace BlazorApp.Server
             .ConfigureApiBehaviorOptions(o => o.SuppressModelStateInvalidFilter = true)
             .SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
 
-            
+            if (!_env.IsProduction())
+            {
+                services.AddSwaggerGen(options =>
+                {
+                    options.EnableAnnotations();
+
+                    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
+                    {
+                        In = ParameterLocation.Header,
+                        Description = "Access token",
+                        Name = "Authorization",
+                        Type = SecuritySchemeType.ApiKey
+                    });
+
+                    options.OrderActionsBy(x => x.ActionDescriptor.DisplayName);
+
+                    // resolve the IApiVersionDescriptionProvider service
+                    // note: that we have to build a temporary service provider here because one has not been created yet
+                    var provider = services.BuildServiceProvider().GetRequiredService<IApiVersionDescriptionProvider>();
+
+                    // add a swagger document for each discovered API version
+                    // note: you might choose to skip or document deprecated API versions differently
+                    foreach (var description in provider.ApiVersionDescriptions)
+                    {
+                        options.SwaggerDoc(description.GroupName, CreateInfoForApiVersion(description));
+                    }
+
+                    // add a custom operation filter which sets default values
+
+                    // integrate xml comments
+                    options.IncludeXmlComments(XmlCommentsFilePath);
+                    options.IgnoreObsoleteActions();
+
+                    options.OperationFilter<DefaultValues>();
+                    options.OperationFilter<SecurityRequirementsOperationFilter>("Bearer");
+
+                    // for deep linking
+                    options.CustomOperationIds(e => $"{e.HttpMethod}_{e.RelativePath.Replace('/', '-').ToLower()}");
+                });
+
+                // instead of options.DescribeAllEnumsAsStrings()
+                services.AddSwaggerGenNewtonsoftSupport();
+            }
+
+
             var sp = services.BuildServiceProvider();
             var serviceScopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
 
@@ -290,13 +355,126 @@ namespace BlazorApp.Server
 
             #endregion
 
+            if (!_env.IsProduction())
+            {
+                // Enable middleware to serve generated Swagger as a JSON endpoint.
+                app.UseSwagger(options =>
+                {
+                    options.PreSerializeFilters.Add((swagger, httpReq) =>
+                    {
+                        //swagger.Host = httpReq.Host.Value;
+
+                        var ampersand = "&amp;";
+
+                        foreach (var path in swagger.Paths)
+                        {
+                            if (path.Value.Operations.Any(x => x.Key == OperationType.Get && x.Value.Deprecated))
+                                path.Value.Operations.First(x => x.Key == OperationType.Get).Value.Description = path.Value.Operations.First(x => x.Key == OperationType.Get).Value.Description.Replace(ampersand, "&");
+
+                            if (path.Value.Operations.Any(x => x.Key == OperationType.Delete && x.Value?.Description != null))
+                                path.Value.Operations.First(x => x.Key == OperationType.Delete).Value.Description = path.Value.Operations.First(x => x.Key == OperationType.Delete).Value.Description.Replace(ampersand, "&");
+                        }
+
+                        var paths = swagger.Paths.ToDictionary(p => p.Key, p => p.Value);
+                        foreach (KeyValuePair<string, OpenApiPathItem> path in paths)
+                        {
+                            swagger.Paths.Remove(path.Key);
+                            swagger.Paths.Add(path.Key.ToLowerInvariant(), path.Value);
+                        }
+                    });
+                });
+
+                // Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.), specifying the Swagger JSON endpoint.
+                app.UseSwaggerUI(options =>
+                {
+                    options.IndexStream = () => System.IO.File.OpenRead("Views/Swagger/swagger-ui.html");
+                    options.InjectStylesheet("/Swagger/swagger-ui.style.css");
+
+                    var provider = app.ApplicationServices.GetService<IApiVersionDescriptionProvider>();
+
+                    foreach (var description in provider.ApiVersionDescriptions)
+                        options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+
+                    options.EnableFilter();
+
+                    // for deep linking
+                    options.EnableDeepLinking();
+                    options.DisplayOperationId();
+                });
+
+                app.UseReDoc(c =>
+                {
+                    c.RoutePrefix = "docs";
+                    c.SpecUrl("/swagger/v1/swagger.json");
+                    c.ExpandResponses("200");
+                    c.RequiredPropsFirst();
+                });
+            }
+
             app.UseHttpsRedirection();
             app.UseBlazorFrameworkFiles();
             app.UseStaticFiles();
+			app.UseRouting();
 
-            app.UseRouting();
+			#region Error handler
 
-            app.UseAuthentication();
+			// Different middleware for api and ui requests  
+			app.UseWhen(context => context.Request.Path.StartsWithSegments("/api"), appBuilder =>
+			{
+				var localizer = app.ApplicationServices.GetService<IStringLocalizer<ErrorsResource>>();
+				var logger = app.ApplicationServices.GetService<ILoggerFactory>().CreateLogger("GlobalErrorHandling");
+
+				// Exception handler - show exception data in api response
+				appBuilder.UseExceptionHandler(new ExceptionHandlerOptions
+				{
+					ExceptionHandler = async context =>
+					{
+						var errorModel = new ErrorResponseModel(localizer);
+						var result = new ContentResult();
+
+						var exception = context.Features.Get<IExceptionHandlerPathFeature>();
+
+						if (exception.Error is CustomException)
+						{
+							var ex = (CustomException)exception.Error;
+
+							result = errorModel.Error(ex);
+						}
+						else
+						{
+							var message = exception.Error.InnerException?.Message ?? exception.Error.Message;
+							logger.LogError($"{exception.Path} - {message}");
+
+							errorModel.AddError("general", message);
+							result = errorModel.InternalServerError(_env.IsDevelopment() ? exception.Error.StackTrace : null);
+						}
+
+						context.Response.StatusCode = result.StatusCode.Value;
+						context.Response.ContentType = result.ContentType;
+
+						await context.Response.WriteAsync(result.Content);
+					}
+				});
+
+				// Handles responses with status codes (correctly executed requests, without any exceptions)
+				appBuilder.UseStatusCodePages(async context =>
+				{
+					var errorResponse = ErrorHelper.GetError(localizer, context.HttpContext.Response.StatusCode);
+
+					context.HttpContext.Response.ContentType = "application/json";
+					await context.HttpContext.Response.WriteAsync(JsonConvert.SerializeObject(errorResponse, new JsonSerializerSettings { Formatting = Formatting.Indented }));
+				});
+			});
+
+			app.UseWhen(context => !context.Request.Path.StartsWithSegments("/api"), appBuilder =>
+			{
+				appBuilder.UseExceptionHandler("/Error");
+				appBuilder.UseStatusCodePagesWithReExecute("/Error", "?statusCode={0}");
+			});
+
+			#endregion
+
+			app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
@@ -305,6 +483,42 @@ namespace BlazorApp.Server
                 endpoints.MapControllers();
                 endpoints.MapFallbackToFile("index.html");
             });
+        }
+
+        static string XmlCommentsFilePath
+        {
+            get
+            {
+                var basePath = PlatformServices.Default.Application.ApplicationBasePath;
+                var fileName = typeof(Startup).GetTypeInfo().Assembly.GetName().Name + ".xml";
+                return Path.Combine(basePath, fileName);
+            }
+        }
+
+        static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)
+        {
+            var info = new OpenApiInfo()
+            {
+                Title = $"ApplicationAuth API {description.ApiVersion}",
+                Version = description.ApiVersion.ToString(),
+                Description = "The ApplicationAuth application with Swagger and API versioning."
+            };
+
+            if (description.IsDeprecated)
+            {
+                info.Description += " This API version has been deprecated.";
+            }
+
+            return info;
+        }
+
+        private string Encode(string input, byte[] key)
+        {
+            HMACSHA256 myhmacsha = new HMACSHA256(key);
+            byte[] byteArray = Encoding.UTF8.GetBytes(input);
+            MemoryStream stream = new MemoryStream(byteArray);
+            byte[] hashValue = myhmacsha.ComputeHash(stream);
+            return Base64UrlEncoder.Encode(hashValue);
         }
     }
 }

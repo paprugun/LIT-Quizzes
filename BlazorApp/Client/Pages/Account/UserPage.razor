@@ -1,149 +1,258 @@
 ﻿@page "/userpage"
+@using BlazorApp.Client.Services
+@using BlazorApp.Shared.Models.Enums
+@using BlazorApp.Shared.Models.RequestModels.Pagination
 @using BlazorApp.Shared.Models.RequestModels.User
+@using BlazorApp.Shared.Models.ResponseModel.Course
 @using BlazorApp.Shared.Models.ResponseModel.Session
 @using BlazorApp.Shared.Models.ResponseModel.User
 @using System.Text.Json
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject IQuizService _service
 @inject NavigationManager Nv
-<section>
-  <div class="container py-5">
-    <div class="row">
-      <div class="col-lg-4">
-        <div class="card mb-4">
-          <div class="card-body text-center">
-            <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava3.webp" alt="avatar"
-              class="rounded-circle img-fluid" style="width: 150px;">
-            <h5 class="my-3">@_profile.FirstName</h5>
-            <p class="text-muted mb-1">@_profile.Email</p>
-            <div class="d-flex justify-content-center mb-2">
-            @switch(_isEditing)
-            {
-                case false:
-                <button type="button" class="btn btn-primary" @onclick="() => _isEditing = !_isEditing">Edit profile</button>
-                break;
-                case true:
-                <button type="button" class="btn btn-success" @onclick="EditProfile" style="margin-right:10px">Submit</button>
-                <button class="btn btn-secondary" @onclick="ResetUser" style="margin-left: 10px">Reset</button>
-                break;
-            }
-            </div>
-          </div>
-        </div>
-        <div class="card mb-4 mb-lg-0">
-          <div class="card-body p-0">
-            <div class="list-group">
-              <a href="results" class="list-group-item list-group-item-action">Ваші результати</a>
-              <a class="list-group-item list-group-item-action" @onclick="mainLayout.Logout">Вийти<i class="oi oi-account-logout"></i></a>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-8">
-        <div class="card mb-4">
-          <div class="card-body">
-            
-            @switch(_isEditing)
-            {
-                case true:
-                <div class="row">
-                  <div class="col-sm-3">
-                    <p class="mb-0">Ім`я:</p>
-                  </div>
-                  <div class="col-sm-9">
-                    <div class="form-group">
-                      <input type="text" class="form-control" placeholder="@_profile.FirstName" id="inputDefault" @onchange="(ChangeEventArgs e) => _profile.FirstName = e.Value.ToString()">
-                    </div>
-                  </div>
-                  <br>
-                  <div class="col-sm-3">
-                    <p class="mb-0">Прізвище:</p>
-                  </div>
-                  <div class="col-sm-9">
-                    <div class="form-group">
-                      <input type="text" class="form-control" placeholder="@_profile.LastName" id="inputDefault" @onchange="(ChangeEventArgs e) => _profile.LastName = e.Value.ToString()">
-                    </div>
-                  </div>
-                </div>
-                <hr>
-                <div class="row">
-                  <div class="col-sm-3">
-                    <p class="mb-0">Ваша роль</p>
-                  </div>
-                  <div class="col-sm-9">
-                    <p class="text-muted mb-0">@_profile.Role</p>
-                  </div>
-                </div>
-                <hr>
-                break;
+<style>
+    body {
+        background: #FBF9FD;
+    }
 
-                case false:
-                <div class="row">
-                  <div class="col-sm-3">
-                    <p class="mb-0">Повне імя</p>
-                  </div>
-                  <div class="col-sm-9">
-                    <p class="text-muted mb-0">@_profile.FirstName @_profile.LastName</p>
-                  </div>
-                </div>
-                <hr>
-                <div class="row">
-                  <div class="col-sm-3">
-                    <p class="mb-0">Ваша роль</p>
-                  </div>
-                  <div class="col-sm-9">
-                    <p class="text-muted mb-0">@_profile.Role</p>
-                  </div>
-                </div>
-                <hr>
-                break;
-            }
-              
+    .card {
+        border-color: white;
+    }
+
+    .statistic-block {
+        box-sizing: border-box;
+        padding: 10px;
+        display: flex;
+        flex-direction: row;
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+        .statistic-block:hover {
+            background-color: lightgrey;
+        }
+
+        .statistic-block .icon {
+            border-radius: 6px;
+            height: 24px;
+            width: 24px;
+            display: block;
+        }
+
+        .statistic-block .info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            row-gap: 3px;
+        }
+
+    .custom-card {
+        width: 100%;
+        height: 225px;
+        border: 1px solid transparent;
+        border-radius: 30px;
+        overflow: hidden;
+        position: relative;
+        background: #FFFFFF;
+        padding-top: 15px;
+    }
+
+    .block-title {
+        padding-bottom: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 14px;
+        color: #4fa762;
+    }
+
+    .price-block {
+        width: 100%;
+        border-radius: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 20px 48px;
+        background-color: #ebfcc7;
+    }
+
+    .price {
+        font-size: 36px;
+        font-weight: 600;
+        line-height: 46px;
+        color: #191F3D;
+    }
+
+    .info {
+        font-size: 26px;
+        font-weight: 500;
+        line-height: 46px;
+        color: #191F3D;
+    }
+
+    .info-block {
+        padding: 20px 48px;
+        display: flex;
+        flex-direction: row;
+    }
+
+    .info-block-item {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+</style>
+
+@if (_courses == null)
+{
+    <h1> Loading</h1>
+}
+else
+{
+    <section>
+        <div class="container px-5">
             <div class="row">
-              <div class="col-sm-3">
-                <p class="mb-0">Статус аккаунта:</p>
-              </div>
-              <div class="col-sm-9">
-              @switch(_profile.IsBlocked)
-              {
-                case false:
-                <span class="badge bg-success">Активний</span>
-                    break;
-                case true:
-                <span class="badge bg-danger">Бан</span>
-                break;
-              }
-              </div>
+                <div class="col-lg-4">
+                    <div class="card mb-4">
+                        <div class="card-body text-center">
+                            <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava3.webp" alt="avatar"
+                                 class="rounded-circle img-fluid" style="width: 150px;">
+                            <h5 class="my-3">@_profile.FirstName</h5>
+                            <p class="text-muted mb-1">@_profile.Email</p>
+                            <div class="d-flex justify-content-center mb-2">
+                                @switch (_isEditing)
+                                {
+                                    case false:
+                                        <button type="button" class="btn btn-primary" @onclick="() => _isEditing = !_isEditing">Edit profile</button>
+                                        break;
+                                    case true:
+                                        <button type="button" class="btn btn-success" @onclick="EditProfile" style="margin-right:10px">Submit</button>
+                                        <button class="btn btn-secondary" @onclick="ResetUser" style="margin-left: 10px">Reset</button>
+                                        break;
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mb-4 mb-lg-0">
+                        <div class="card-body p-0">
+                            <div class="list-group">
+                                <a href="usercourses" class="list-group-item list-group-item-action">Ваші результати</a>
+                                <a class="list-group-item list-group-item-action" @onclick="mainLayout.Logout">Вийти<i class="oi oi-account-logout"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-8">
+                    <div class="card mb-4">
+                        <div class="card-body">
+
+                            @switch (_isEditing)
+                            {
+                                case true:
+                                    <div class="row">
+                                        <div class="col-sm-3">
+                                            <p class="mb-0">Ім`я:</p>
+                                        </div>
+                                        <div class="col-sm-9">
+                                            <div class="form-group">
+                                                <input type="text" class="form-control" placeholder="@_profile.FirstName" id="inputDefault" @onchange="(ChangeEventArgs e) => _profile.FirstName = e.Value.ToString()">
+                                            </div>
+                                        </div>
+                                        <br>
+                                        <div class="col-sm-3">
+                                            <p class="mb-0">Прізвище:</p>
+                                        </div>
+                                        <div class="col-sm-9">
+                                            <div class="form-group">
+                                                <input type="text" class="form-control" placeholder="@_profile.LastName" id="inputDefault" @onchange="(ChangeEventArgs e) => _profile.LastName = e.Value.ToString()">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-sm-3">
+                                            <p class="mb-0">Ваша роль</p>
+                                        </div>
+                                        <div class="col-sm-9">
+                                            <p class="text-muted mb-0">@_profile.Role</p>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    break;
+
+                                case false:
+                                    <div class="row">
+                                        <div class="col-sm-3">
+                                            <p class="mb-0">Повне імя</p>
+                                        </div>
+                                        <div class="col-sm-9">
+                                            <p class="text-muted mb-0">@_profile.FirstName @_profile.LastName</p>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-sm-3">
+                                            <p class="mb-0">Ваша роль</p>
+                                        </div>
+                                        <div class="col-sm-9">
+                                            <p class="text-muted mb-0">@_profile.Role</p>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    break;
+                            }
+
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <p class="mb-0">Статус аккаунта:</p>
+                                </div>
+                                <div class="col-sm-9">
+                                    @switch (_profile.IsBlocked)
+                                    {
+                                        case false:
+                                            <span class="badge bg-success">Активний</span>
+                                            break;
+                                        case true:
+                                            <span class="badge bg-danger">Бан</span>
+                                            break;
+                                    }
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <p class="mb-0">Ваш ID</p>
+                                </div>
+                                <div class="col-sm-9">
+                                    <p class="text-muted mb-0">@_profile.Id</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <div class="card mb-4"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-9">
+                            <div class="card mb-4 mb-md-0">
+                                <div class="card-body">
+                                    <p>
+                                        Відповідно до цієї сторінки довідкового центру ITExpert, уся особиста інформація, пов’язана з вашим обліковим записом, буде видалена з бази даних ITExpert, якщо ви вирішите назавжди видалити обліковий запис.
+                                        «Сюди входить така інформація, як ваше ім’я, адреса електронної пошти, поштова адреса та псевдонім для миттєвих повідомлень», — йдеться на сайті.
+                                        "Копії деяких матеріалів (фотографій, заміток тощо) можуть залишатися на наших серверах з технічних причин.
+                                    </p>
+                                    <button type="button" class="btn btn-outline-danger" @onclick="DeleteAccount">Я приймаю умови і хочу видалити свій аккаунт</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <hr>
-            <div class="row">
-              <div class="col-sm-3">
-                <p class="mb-0">Ваш ID</p>
-              </div>
-              <div class="col-sm-9">
-                <p class="text-muted mb-0">@_profile.Id</p>
-              </div>
-            </div>
-          </div>
         </div>
-        <div class="row">
-          <div class="col-md-9">
-            <div class="card mb-4 mb-md-0">
-              <div class="card-body">
-                <p>
-                   Відповідно до цієї сторінки довідкового центру ITExpert, уся особиста інформація, пов’язана з вашим обліковим записом, буде видалена з бази даних ITExpert, якщо ви вирішите назавжди видалити обліковий запис. 
-                   «Сюди входить така інформація, як ваше ім’я, адреса електронної пошти, поштова адреса та псевдонім для миттєвих повідомлень», — йдеться на сайті. 
-                   "Копії деяких матеріалів (фотографій, заміток тощо) можуть залишатися на наших серверах з технічних причин.
-                </p>
-                <button type="button" class="btn btn-outline-danger" @onclick="DeleteAccount">Я приймаю умови і хочу видалити свій аккаунт</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+    </section>
+
+}
 
 
 
@@ -151,8 +260,9 @@
 @code {
     [CascadingParameter]
     public MainLayout mainLayout { get; set; }
-    private List<UserResultResponse> _results { get; set; } = new List<UserResultResponse>();
-    private UserRoleResponse? _profile { get; set; } = new UserRoleResponse();
+    List<UserResultResponseModel> _results { get; set; } = new List<UserResultResponseModel>();
+    UserRoleResponseModel? _profile { get; set; } = new UserRoleResponseModel();
+    List<SmallCourseResponseModel> _courses = new List<SmallCourseResponseModel>();
     private bool _isEditing = false;
     private bool isException = false;
 
@@ -167,11 +277,14 @@
         if (_profile == null)
             Nv.NavigateTo("/unauthorized");
         _isEditing = false;
+
+        //var response = await _service.GetAllAssignments(new PaginationRequestModel<CourseTableColumn>() { Limit = int.MaxValue });
+        //_courses = response.Data;
     }
 
     public async Task DeleteAccount()
     {
-        await Http.DeleteAsync("profile/delete");
+        await Http.DeleteAsync("api/v1/profile/delete");
         await mainLayout.Logout();
         Nv.NavigateTo("/");
 
@@ -180,8 +293,8 @@
     public async Task EditProfile()
     {
         var postBody = new ProfileRequest() { FirstName = _profile.FirstName, LastName = _profile.LastName };
-        using var resposne = await Http.PostAsJsonAsync($"profile/edit", postBody);
-        var _model = await resposne.Content.ReadFromJsonAsync<UserRoleResponse>();
+        using var resposne = await Http.PostAsJsonAsync($"api/v1/profile/edit", postBody);
+        var _model = await resposne.Content.ReadFromJsonAsync<UserRoleResponseModel>();
         _profile = _model;
 
         string json = JsonSerializer.Serialize(_profile);

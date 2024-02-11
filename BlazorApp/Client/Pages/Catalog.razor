@@ -1,244 +1,374 @@
-﻿@page "/quizcatalog" 
+﻿@page "/quizcatalog"
+@using BlazorApp.Client.Services
+@using BlazorApp.Client.Shared.Pagination
+@using BlazorApp.Shared.Models.Enums
+@using BlazorApp.Shared.Models.RequestModels.Pagination
+@using BlazorApp.Shared.Models.ResponseModel.Course
+@using BlazorApp.Shared.Models.ResponseModel.Quiz
 
 @inject HttpClient Http
+@inject IQuizService _service
 @inject NavigationManager Nv
-@using BlazorApp.Client.Shared.Pagination
-@using BlazorApp.Shared.Models.ResponseModels.Quiz
+
 <style>
     * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    list-style: none;
-    font-family: 'Montserrat', sans-serif;
-}
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        list-style: none;
+        font-family: 'Montserrat', sans-serif;
+    }
 
-p {
-    margin: 0;
-}
+    .course-card {
+        width: 265px;
+        height: 250px;
+        flex-shrink: 0;
+        border-radius: 34px;
+        background: #FBF9FD;
+        border: 1px solid transparent;
+        padding: 30px 19px 25px 19px;
+        box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    }
 
-.category .job {
-    height: 280px;
-    border: 1px solid transparent;
-    padding: 30px 19px 25px 19px;
-    border-radius: 5px;
-    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
-}
+    .category .job {
+        height: 350px;
+        border: 1px solid transparent;
+        padding: 30px 19px 25px 19px;
+        border-radius: 30px;
+        background: #FBF9FD;
+        box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+        position: relative;
+        overflow: hidden;
+    }
 
-.category .job:hover {
-    border: 1px solid #0d6efd;
-}
+    .more-info {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        background-color: #007bff;
+        color: #fff;
+        padding: 10px 20px;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        pointer-events: none;
+        border-top-left-radius: 15px; /* Скругленные углы вверхнего левого угла */
+        border-bottom-right-radius: 5px; /* Скругленные углы нижнего правого угла */
+    }
 
-.category .job span {
-    padding: 6px 20px;
-    font-weight: 400;
-    border-radius: 26px;
-    display: inline-block;
-}
+    .job:hover .more-info {
+        transform: translateX(0);
+    }
 
-.category .job .colors1 {
-    font-weight: 800;
-    color: #F27E42;
-    background: #f27e4242;
-}
+    p {
+        margin: 0;
+    }
 
-.category .job .colors2 {
-    font-weight: 800;
-    color: #4294F2;
-    background: rgba(66, 148, 255, 0.26);
-}
+    .category .job {
+        height: 280px;
+        border: 1px solid transparent;
+        padding: 30px 19px 25px 19px;
+        border-radius: 5px;
+        box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    }
 
-.category .job .colors3 {
-    font-weight: 800;
-    color: #2EB98D;
-    background: rgba(46, 185, 141, 0.03);
-}
+        .category .job:hover {
+            border: 1px solid #0d6efd;
+        }
 
-.category .job .colors4 {
-    font-weight: 800;
-    color: #6A42F2;
-    background: rgba(106, 66, 242, 0.07);
-}
+        .category .job span {
+            padding: 6px 20px;
+            font-weight: 400;
+            border-radius: 26px;
+            display: inline-block;
+        }
 
-.category .job .colors5 {
-    font-weight: 800;
-    color: #F162BC;
-    background: rgba(241, 98, 188, 0.07);
-}
+        .category .job .colors1 {
+            font-weight: 800;
+            color: #F27E42;
+            background: #f27e4242;
+        }
 
-.category .job .colors2 {
-    font-weight: 800;
-    color: #4294F2;
-    background: rgba(66, 148, 255, 0.26);
-}
+        .category .job .colors2 {
+            font-weight: 800;
+            color: #4294F2;
+            background: rgba(66, 148, 255, 0.26);
+        }
 
-a {
-    text-decoration: none;
-    font-size: 20px;
-    font-weight: 600;
-    color: #071112;
-    text-transform: capitalize;
-    margin-bottom: 17px;
-    display: block;
-}
+        .category .job .colors3 {
+            font-weight: 800;
+            color: #2EB98D;
+            background: rgba(46, 185, 141, 0.03);
+        }
 
-.place {
-    display: flex;
-    align-items: center;
-    font-size: 12px;
-    padding-left: 0px;
-    color: #76787A;
-}
+        .category .job .colors4 {
+            font-weight: 800;
+            color: #6A42F2;
+            background: rgba(106, 66, 242, 0.07);
+        }
 
-.left {
-    font-weight: 800;
-    position: relative;
-}
+        .category .job .colors5 {
+            font-weight: 800;
+            color: #F162BC;
+            background: rgba(241, 98, 188, 0.07);
+        }
 
-.category .job span.time {
-    font-weight: 900;
-}
+        .category .job .colors2 {
+            font-weight: 800;
+            color: #4294F2;
+            background: rgba(66, 148, 255, 0.26);
+        }
 
-.btn.btn-primary {
-    width: 150px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
+    a {
+        text-decoration: none;
+        font-size: 20px;
+        font-weight: 600;
+        color: #071112;
+        text-transform: capitalize;
+        margin-bottom: 17px;
+        display: block;
+    }
+
+    .place {
+        display: flex;
+        align-items: center;
+        font-size: 12px;
+        padding-left: 0px;
+        color: #76787A;
+    }
+
+    .left {
+        font-weight: 800;
+        position: relative;
+    }
+
+    .category .job span.time {
+        font-weight: 900;
+    }
+
+    .btn.btn-primary {
+        width: 150px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
 
 
-.mt-30 {
-    margin-top: 30px;
-}
+    .mt-30 {
+        margin-top: 30px;
+    }
 
-.mb-30 {
-    margin-bottom: 30px;
-}
+    .mb-30 {
+        margin-bottom: 30px;
+    }
 
-.bottom {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-}
+    .bottom {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+    }
+
+    .form-select {
+        width: 200px;
+        margin-right: 15px;
+    }
 </style>
-<div class="container h-100">
-    <div class="d-flex align-items-center justify-content-center h-100">
-        <div class="d-flex flex-column">
-            <div class="input-group mb-3">
-                <input type="text" class="form-control" placeholder="Пошук..." @onkeydown="@Enter" @onchange="(ChangeEventArgs e) => _filter = e.Value.ToString()">
-                <button class="btn btn-sm btn-outline-primary" type="button" @onclick="Search">Пошук</button>
-                @if (_filter != String.Empty)
-                {
-                    <button class="btn-close" type="button" @onclick="CleanFilters" style="margin-right: 15px"></button>
-                }
+<div style="background-color:  #FBF9FD">
+    <div class="container h-100">
+        <div class="d-flex align-items-center justify-content-center h-100">
+            <div class="d-flex flex-column">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" placeholder="Пошук..." @onkeydown="@Enter" @onchange="(ChangeEventArgs e) => _search = e.Value.ToString()">
+                    <button class="btn btn-sm btn-outline-primary" type="button" @onclick="Search">Пошук</button>
+                    @if (_search != String.Empty)
+                    {
+                        <button class="btn-close" type="button" @onclick="CleanSearch" style="margin-right: 15px"></button>
+                    }
+                </div>
             </div>
         </div>
     </div>
-</div>
-<div class="btn-group" role="group">
-    <div class="btn-group">
-        <button class="btn colors4 @(_filter == "C#" ? "active" : "")" @onclick='() => SetFilter("C#")'>C#</button>
-        <button class="btn colors5 @(_filter == "JavaScript" ? "active" : "")" @onclick='() => SetFilter("JavaScript")'>JS</button>
-        <button class="btn colors2 @(_filter == "C++" ? "active" : "")" @onclick='() => SetFilter("C++")'>C++</button>
-    </div>
-</div>
-<hr/>
+    <div class="d-flex flex-row px-4">
+        <Blazorise.Dropdown Style="margin-right: 10px;">
+            <DropdownToggle Color="Color.Light">
+                Напрями
+            </DropdownToggle>
+            <Blazorise.DropdownMenu>
+                @foreach (var item in topicsFilterOptions)
+                {
+                    <Blazorise.DropdownItem ShowCheckbox CheckedChanged="() => SetFilter(item.Name, topicsFilterOptions)">@item.Name</Blazorise.DropdownItem>
+                }
+            </Blazorise.DropdownMenu>
+        </Blazorise.Dropdown>
 
-<div class="container">
-    <div class="row"> 
-        @foreach (var quiz in _quizzesPerPage)
+        <Blazorise.Dropdown Style="margin-right: 10px;">
+            <DropdownToggle Color="Color.Light">
+                Мови викладання
+            </DropdownToggle>
+            <Blazorise.DropdownMenu>
+                @foreach (var item in languageFilterOptions)
+                {
+                    <Blazorise.DropdownItem ShowCheckbox CheckedChanged="() => SetFilter(item.Name, languageFilterOptions)">@item.Name</Blazorise.DropdownItem>
+                }
+            </Blazorise.DropdownMenu>
+        </Blazorise.Dropdown>
+
+        <Blazorise.Dropdown Style="margin-right: 10px;">
+            <DropdownToggle Color="Color.Light">
+                Рівень
+            </DropdownToggle>
+            <Blazorise.DropdownMenu>
+                @foreach (var item in difficultFilterOptions)
+                {
+                    <Blazorise.DropdownItem ShowCheckbox CheckedChanged="() => SetFilter(item.Data, difficultFilterOptions)">@item.Name</Blazorise.DropdownItem>
+                }
+            </Blazorise.DropdownMenu>
+        </Blazorise.Dropdown>
+        <!--
+            <select class="form-select" id="exampleSelect1" style="padding-right: 5px;" @onchange="(ChangeEventArgs e) => SetFilter(e.Value.ToString())">
+            <option value="">Напрями</option>
+        @foreach (var item in topicsFilterOptions)
         {
-            var rnd = new Random().Next(1, 5).ToString();
-            <div class="col-lg-4 col-md-6 col-sm-6">
-                <div class="category mb-30">
-                    <div class="job">
-                        <span class="colors@(rnd) mb-4">@quiz.Topic</span>
-                        <h5 class="fw-bold text-wrap">@quiz.Name</h5>
-                        <div class="container">
-                            <div class="left">
-                                <p class="text-muted">@quiz.QuestionsCount Питань</p>
+                <option value="@item.Name">@item.Name</option>
+                <input type="checkbox" @bind="@item.IsChecked"/>
+        }
+        </select>
+
+        <select class="form-select" id="exampleSelect2" @onchange="(ChangeEventArgs e) => SetFilter(e.Value.ToString())" def>
+            <option value="">Мова викладання</option>
+        @foreach (var item in languageFilterOptions)
+        {
+                <option value="@item.Name">@item.Name</option>
+                <input type="checkbox" @bind="item.IsChecked" />
+        }
+        </select>
+        -->
+
+    </div>
+    <hr />
+
+    <div class="container">
+        <div class="row">
+            @foreach (var course in _courses)
+            {
+                var rnd = new Random().Next(1, 5).ToString();
+                <div class="col-lg-4 col-md-6 col-sm-6">
+                    <div class="category mb-30">
+                        <div class="job" @onclick='() => Nv.NavigateTo($"/course/{course.Id}")'>
+                            <span class="colors@(rnd) mb-4">@course.Topic</span>
+                            <h5 class="fw-bold text-wrap">@course.Name</h5>
+                            <div class="container">
+                                <div class="left d-flex flex-column">
+                                    <div class="d-flex flex-row">
+                                        @course.LessonsCount уроків
+                                    </div>
+                                    <div class="d-flex flex-row">
+
+                                        @switch (course.Difficult)
+                                        {
+                                            case 1:
+                                                <i style="color: yellow" class="oi oi-star"></i>
+
+                                                <p>Підготовчий</p>
+                                                break;
+                                            case 2:
+                                                <i style="color: yellow" class="oi oi-star"></i>
+                                                <i style="color: yellow" class="oi oi-star"></i>
+
+                                                <p>Базовий</p>
+                                                break;
+                                            case 3:
+                                                <i style="color: yellow" class="oi oi-star"></i>
+                                                <i style="color: yellow" class="oi oi-star"></i>
+                                                <i style="color: yellow" class="oi oi-star"></i>
+
+                                                <p>Середній</p>
+                                                break;
+                                            case 4:
+                                                <i style="color: yellow" class="oi oi-star"></i>
+                                                <i style="color: yellow" class="oi oi-star"></i>
+                                                <i style="color: yellow" class="oi oi-star"></i>
+                                                <i style="color: yellow" class="oi oi-star"></i>
+
+                                                <p>Високий</p>
+                                                break;
+                                        }
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <i class="oi oi-book"></i> @course.Language
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-lg colors@(rnd)" type="button" @onclick="() => GoToQuiz(quiz.Id)" style="margin-top:50px">Пройти</button>
+                            <div class="more-info"><strong>Дізнатись більше</strong></div>
                         </div>
                     </div>
                 </div>
+            }
+            <div class="col-12 d-flex align-items-center justify-content-center">
+                <MyPagination TotalPages="@(_totalPages != 0 ? _totalPages : 1)"
+                              PageIndex="@State.PageIndex"
+                              Radius="3"
+                              OnSelectedPage="@SelectedPage">
+                </MyPagination>
             </div>
-        }
-        <div class="col-12 d-flex align-items-center justify-content-center">
-            <Pagination TotalPages="@(_totalPages != 0 ? _totalPages : 1)"
-                            PageIndex="@State.PageIndex"
-                            Radius="3"
-                            OnSelectedPage="@SelectedPage">
-            </Pagination>
         </div>
     </div>
 </div>
+
 @code {
+    public class FilterOption
+    {
+        public string Name { get; set; }
+        public string? Data { get; set; }
+        public bool IsChecked { get; set; } = false;
+    }
+
     [CascadingParameter]
     public PageIndexStateProvider State { get; set; }
 
-    private List<SmallQuizResponse> _allQuizzes = null;
-    private List<SmallQuizResponse> _quizzesPerPage = new List<SmallQuizResponse>();
+    List<SmallCourseResponseModel> _courses = new List<SmallCourseResponseModel>();
+    List<TopicResponse> _topics = new List<TopicResponse>();
 
     #region Additional propeties
-    private int _itemsPerPage = 9;
-    private int _totalPages = 1;
-    private string _filter = String.Empty;
-    private string _errString = String.Empty;
+    int _offset = 0;
+    int _itemsPerPage = 9;
+    int _totalPages = 0;
+    List<string> _filters = new List<string>();
+    List<FilterOption> topicsFilterOptions = new List<FilterOption>();
+    List<FilterOption> languageFilterOptions = new List<FilterOption>();
+    List<FilterOption> difficultFilterOptions =  new List<FilterOption>();
+    string _search = String.Empty;
+    string _errString = String.Empty;
     #endregion
 
-    private void SelectedPage(int selectedPageIndex)
+    private async Task SelectedPage(int selectedPageIndex)
     {
-        if (_filter != String.Empty)
+        if (_courses != null)
         {
             State.PageIndex = selectedPageIndex;
-            var skipcount = _itemsPerPage * (State.PageIndex - 1);
-
-            var filteredList = _allQuizzes.FindAll(x => x.Topic.Contains(_filter));
-            _quizzesPerPage = filteredList.Skip(skipcount).Take(_itemsPerPage).ToList();
+            _offset = _offset * (State.PageIndex - 1);
+            await RefreshTable(new PaginationRequestModel<CourseTableColumn>() { Offset = _offset, Limit = _itemsPerPage, Search = _search, Filters = _filters });
         }
-        if (_allQuizzes != null)
-        {
-            State.PageIndex = selectedPageIndex;
-            var skipcount = _itemsPerPage * (State.PageIndex - 1);
-            _quizzesPerPage = _allQuizzes.Skip(skipcount).Take(_itemsPerPage).ToList();
-        }
-    }
-
-    private async Task InitPagination()
-    {
-        if (_allQuizzes != null)
-        {
-            // Initialize the number of "totalPages"
-            _totalPages = (int)Math.Ceiling(double.Parse(_allQuizzes.Count.ToString()) / _itemsPerPage);
-
-            // Initialize the "item" which will be displayed when the page loaded first time.
-            var skipcount = _itemsPerPage * (State.PageIndex - 1);
-            _quizzesPerPage = _allQuizzes.Skip(skipcount).Take(_itemsPerPage).ToList();
-
-        }
-    }
-
-    private async Task SetFilteredPagination()
-    {
-        State.PageIndex = 1;
-        _totalPages = (int)Math.Ceiling(double.Parse(_quizzesPerPage.Count.ToString()) / _itemsPerPage);
     }
 
     protected override async Task OnInitializedAsync()
     {
-        await RefreshData();
-    }
+        await RefreshTable(new PaginationRequestModel<CourseTableColumn>() { Offset = 0, Search = _search, Limit = _itemsPerPage });
+        State.PageIndex = 1;
 
-    private async Task RefreshData()
-    {
-        using var resposne = await Http.GetAsync($"catalog/");
-        var quizzes = await resposne.Content.ReadFromJsonAsync<IEnumerable<SmallQuizResponse>>();
-        _allQuizzes = quizzes.ToList();
-        await InitPagination();
+        topicsFilterOptions = _topics.Select(topic => new FilterOption { Name = topic.Name}).ToList();
+        languageFilterOptions = new List<FilterOption>
+        {
+            new FilterOption { Name = "Англійська"},
+            new FilterOption { Name = "Українська"},
+        };
+        difficultFilterOptions = new List<FilterOption>
+        {
+            new FilterOption { Name = "Підготовчий", Data = "1" },
+            new FilterOption { Name = "Базовий", Data = "2" },
+            new FilterOption { Name = "Середній", Data = "3"},
+            new FilterOption { Name = "Просунутий", Data = "4"}
+        };
     }
 
     private void GoToQuiz(int quizId)
@@ -246,36 +376,56 @@ a {
         Nv.NavigateTo($"/passQuiz/{quizId}");
     }
 
-    private async Task SetFilter(string filter)
+    private async Task SetFilter(string filter, List<FilterOption> filterOptions)
     {
-        if (_filter != filter)
+        var selectedFilter = filterOptions.FirstOrDefault(f => f.Name == filter || f.Data == filter);
+
+        if (selectedFilter != null)
         {
-            _filter = filter;
+            if (selectedFilter.IsChecked)
+                _filters.Remove(_filters.FirstOrDefault(x => x == filter));
+            if (selectedFilter.IsChecked == false)
+                _filters.Add(filter);
 
-            var filteredList = _allQuizzes.FindAll(x => x.Topic.Contains(filter));
-            _quizzesPerPage = filteredList.Take(_itemsPerPage).ToList();
+            State.PageIndex = 1;
+            await RefreshTable(new PaginationRequestModel<CourseTableColumn>() { Offset = 0, Search = _search, Limit = _itemsPerPage, Filters = _filters });
 
-            await SetFilteredPagination();
+            filterOptions.FirstOrDefault(x => x.Name == filter || x.Data == filter).IsChecked = !filterOptions.FirstOrDefault(x => x.Name == filter || x.Data == filter).IsChecked;
+            StateHasChanged();
         }
-        else
-        {
-            await CleanFilters();
-        }
-
     }
 
 
-    private async Task Search()
+    public async Task Search()
     {
-        var filteredList = _allQuizzes.FindAll(x => x.Topic.Contains(_filter, StringComparison.OrdinalIgnoreCase));
-        _quizzesPerPage = filteredList.Take(_itemsPerPage).ToList();
-        await SetFilteredPagination();   
+        State.PageIndex = 1;
+        await RefreshTable(new PaginationRequestModel<CourseTableColumn>() { Offset = 0, Search = _search, Limit = _itemsPerPage });
     }
 
-    private async Task CleanFilters()
+    public async Task CleanFilters()
     {
-        _filter = String.Empty;
-        await InitPagination();
+        _filters = new List<string>();
+        State.PageIndex = 1;
+        await RefreshTable(new PaginationRequestModel<CourseTableColumn>() { Limit = _itemsPerPage, Search = _search });
+    }
+
+    public async Task CleanSearch()
+    {
+        _search = String.Empty;
+        State.PageIndex = 1;
+        await RefreshTable(new PaginationRequestModel<CourseTableColumn>() { Limit = _itemsPerPage, Filters = _filters });
+    }
+
+    public async Task RefreshTable(PaginationRequestModel<CourseTableColumn> model)
+    {
+        var response = await _service.GetAllCourses(model);
+        _courses = response.Data;
+        _itemsPerPage = model.Limit;
+        _offset = response.Pagination.NextOffset;
+        _totalPages = (int)Math.Ceiling(double.Parse(response.Pagination.TotalCount.ToString()) / _itemsPerPage);
+
+        var topicResponse = await _service.GetAllTopics();
+        _topics = topicResponse.ToList();
     }
 
     private async Task Enter(KeyboardEventArgs e)

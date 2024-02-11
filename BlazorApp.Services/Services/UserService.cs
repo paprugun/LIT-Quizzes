@@ -17,7 +17,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using BlazorApp.Shared.Models.ResponseModel.Session;
 using BlazorApp.Models.ResponseModels.Session;
 using Microsoft.AspNetCore.Identity;
 
@@ -76,10 +75,12 @@ namespace BlazorApp.Services.Services
             //!x.UserRoles.Any(w => (_userIsSuperAdmin && w.Role.Name != Role.Admin) && w.Role.Name != Role.SuperAdmin)
 
             var users = _unitOfWork.Repository<ApplicationUser>().Get(x => !x.IsDeleted
-                                            && !x.UserRoles.Any(w => w.Role.Name == Role.SuperAdmin)
                                             && (!search || (x.Email.Contains(model.Search) || x.Profile.FirstName.Contains(model.Search) || x.Profile.LastName.Contains(model.Search)))
-                                            && (getAdmins ? x.UserRoles.Any(w => w.Role.Name == Role.Admin) : x.UserRoles.Any(w => w.Role.Name == Role.User))
-                                            && (_isUserSuperAdmin || !x.UserRoles.Any(w => (w.Role.Name == Role.Admin))))
+                                            && (getAdmins
+                                                    ? (x.UserRoles.Any(w => w.Role.Name == Role.Admin) || x.UserRoles.Any(w => w.Role.Name == Role.SuperAdmin))
+                                                    : x.UserRoles.Any(w => w.Role.Name == Role.User))
+                                            //&& (_isUserSuperAdmin || !x.UserRoles.Any(w => w.Role.Name == Role.Admin))
+                                            )
                                         .TagWith(nameof(GetAll) + "_GetUsers")
                                         .Include(w => w.UserRoles)
                                             .ThenInclude(w => w.Role)
@@ -92,6 +93,7 @@ namespace BlazorApp.Services.Services
                                             RegisteredAt = x.RegistratedAt,
                                             Id = x.Id
                                         });
+
 
 
             if (search)
@@ -200,6 +202,28 @@ namespace BlazorApp.Services.Services
             return _mapper.Map<UserRoleResponseModel>(user);
         }
 
+        public UserResponseModel DisbanUser(int id)
+        {
+            var user = _unitOfWork.Repository<ApplicationUser>().Get(w => w.Id == id && !w.UserRoles.Any(x => x.Role.Name == Role.SuperAdmin)
+                                                                && (!w.UserRoles.Any(x => x.Role.Name == Role.Admin) || _isUserSuperAdmin))
+                                                              .TagWith(nameof(SoftDeleteUser) + "_GetUser")
+                                                              .Include(w => w.Profile)
+                                                              .Include(w => w.QuizzesResults)
+                                                              .ThenInclude(w => w.Quiz)
+                                                              .FirstOrDefault();
+
+            if (user == null)
+                throw new CustomException(HttpStatusCode.BadRequest, "userId", "User is not found");
+
+            user.IsDeleted = false;
+            user.DeletedAt = DateTime.UtcNow;
+
+            _unitOfWork.Repository<ApplicationUser>().Update(user);
+            _unitOfWork.SaveChanges();
+
+            return _mapper.Map<UserRoleResponseModel>(user);
+        }
+
         public async Task HardDeleteUser(int id)
         {
             var user = _unitOfWork.Repository<ApplicationUser>().Get(w => w.Id == id)
@@ -283,12 +307,21 @@ namespace BlazorApp.Services.Services
         public async Task SetRole(string role, int id)
         {
             var user = _unitOfWork.Repository<ApplicationUser>().Get(x => x.Id == id)
-                                                                .TagWith(nameof(SetRole) + "_GetUser")
-                                                                .Include(w => w.UserRoles)
-                                                                    .ThenInclude(w => w.Role)
-                                                                .FirstOrDefault();
+                                                                    .TagWith(nameof(SetRole) + "_GetUser")
+                                                                    .Include(w => w.UserRoles)
+                                                                        .ThenInclude(w => w.Role)
+                                                                    .FirstOrDefault();
             if (user == null)
                 throw new CustomException(HttpStatusCode.BadRequest, "invalid userId", "invalid userId");
+
+            var existingRole = _unitOfWork.Repository<ApplicationRole>().Get(x => x.Name == role).FirstOrDefault();
+
+            if (existingRole == null)
+            {
+                existingRole = new ApplicationRole() { Name = role };
+                _unitOfWork.Repository<ApplicationRole>().Insert(existingRole);
+                _unitOfWork.SaveChanges();
+            }
 
             if (role == Role.User && user.UserRoles.Any(x => x.Role.Name == Role.Admin))
                 user.UserRoles.Remove(user.UserRoles.FirstOrDefault(x => x.Role.Name == Role.Admin));
@@ -297,7 +330,7 @@ namespace BlazorApp.Services.Services
                 user.UserRoles.Remove(user.UserRoles.FirstOrDefault(x => x.Role.Name == Role.User));
 
             if (!user.UserRoles.Any(x => x.Role.Name == role))
-                user.UserRoles.Add(new ApplicationUserRole() { Role = new ApplicationRole() { Name = role } });
+                user.UserRoles.Add(new ApplicationUserRole() { Role = existingRole });
 
             _unitOfWork.Repository<ApplicationUser>().Update(user);
             _unitOfWork.SaveChanges();

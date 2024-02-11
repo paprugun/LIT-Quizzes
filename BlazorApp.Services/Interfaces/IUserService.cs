@@ -28,12 +28,6 @@ namespace BlazorApp.Services.Interfaces
         CursorPaginationBaseResponseModel<UserTableRowResponseModel> GetAll(CursorPaginationRequestModel<UserTableColumn> model, bool getAdmins = false);
 
         /// <summary>
-        /// Get all users
-        /// </summary>
-        /// <returns></returns>
-        Task<IEnumerable<UserRoleResponseModel>> GetUsers();
-
-        /// <summary>
         /// Get user info
         /// </summary>
         /// <returns></returns>
@@ -63,6 +57,8 @@ namespace BlazorApp.Services.Interfaces
         /// <param name="id"></param>
         /// <returns></returns>
         UserResponseModel SoftDeleteUser(int id);
+
+        UserResponseModel DisbanUser(int id);
 
         /// <summary>
         /// Hard delete user (delete from db)

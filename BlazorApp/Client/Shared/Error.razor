@@ -1,6 +1,10 @@
 ﻿@using BlazorApp.Common.Exceptions
 @using Microsoft.Extensions.Logging
+@using System.Text.RegularExpressions
 @inject ILogger<Error> Logger
+@inject HttpClient Http
+@inject IToastService ToastService
+@inject NavigationManager Nv
 
 <CascadingValue Value="this">
     @ChildContent
@@ -10,13 +14,21 @@
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
-    public void ProcessError(Exception ex)
+    public async Task ProcessError(Exception ex)
     {
         Logger.LogError($"Error:ProcessError - Type: {ex.GetType()} Message: {ex.Message}");
+        ToastService.ShowError("Щось пішло не так." +
+                $"{ex.Message}");
     }
 
-    public void ProcessError(CustomException ex)
+    public async Task ProcessError(CustomException ex)
     {
         Logger.LogError($"Error:ProcessError - Key: {ex.Key} Code: {ex.Code}", ex.GetType(), ex.Message);
+        if (ex.Code == System.Net.HttpStatusCode.NotFound)
+            Nv.NavigateTo($"/404/{ex.Message}");
+        if (ex.Code == System.Net.HttpStatusCode.InternalServerError)
+            Nv.NavigateTo($"/500/{ex.Message}");
+            ToastService.ShowError("Щось пішло не так." +
+                $"{ex.Message}");
     }
 }

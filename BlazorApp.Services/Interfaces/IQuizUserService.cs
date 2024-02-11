@@ -1,4 +1,7 @@
-﻿using BlazorApp.Models.ResponseModels;
+﻿using BlazorApp.Models.Enums;
+using BlazorApp.Models.RequestModels;
+using BlazorApp.Models.ResponseModels;
+using BlazorApp.Models.ResponseModels.Quiz;
 using BlazorApp.Shared.Models.RequestModels.User;
 using BlazorApp.Shared.Models.ResponseModel.User;
 using BlazorApp.Shared.Models.ResponseModels.Quiz;
@@ -15,5 +18,6 @@ namespace BlazorApp.Services.Interfaces
     {
         Task<JoinQuizResponseModel> EnterQuizByCode(JoinQuizRequestModel model);
         Task<PassQuizResponseModel> PassQuiz(PassQuizRequestModel model);
+        PaginationResponseModel<SmallQuizResponseModel> GetAll(PaginationRequestModel<QuizTableColumn> model);
     }
 }

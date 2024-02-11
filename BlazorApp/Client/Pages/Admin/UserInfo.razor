@@ -15,7 +15,7 @@
 <h2>Роль</h2>
 <h3><strong>@_user.Role</strong></h3>
 
-<button type="button" class="btn btn-danger">Видалити користувача</button>
+<button type="button" class="btn btn-danger" @onclick="HardDeleteUser">Видалити користувача</button>
 
 @if (_user.Role != "Admin")
 {
@@ -33,7 +33,7 @@ else
     [Parameter]
     public int Id { get; set; }
 
-    private UserRoleResponse _user = new UserRoleResponse();
+    private UserRoleResponseModel _user = new UserRoleResponseModel();
 
     protected override async Task OnInitializedAsync()
     {
@@ -43,24 +43,37 @@ else
         }
         else
         {
-            var resposne = await Http.GetAsync($"adminusers/info/{Id}");
-            var user = await resposne.Content.ReadFromJsonAsync<UserRoleResponse>();
-            _user = user;   
+            var resposne = await Http.GetAsync($"api/v1/admin-users/user/{Id}");
+            var user = await resposne.Content.ReadFromJsonAsync<UserRoleResponseModel>();
+            _user = user;
         }
-        
+
+    }
+
+    public async Task HardDeleteUser()
+    {
+        await Http.DeleteAsync($"api/v1/admin-users/{Id}");
+        Nv.NavigateTo("/users");
+    }
+
+    public async Task DisbanUser()
+    {
+        using var response = await Http.GetAsync($"api/v1/admin-users/{Id}");
+        var user = await response.Content.ReadFromJsonAsync<UserRoleResponseModel>();
+        _user = user;
     }
 
     public async Task GiveAdmin()
     {
-        using var response = await Http.GetAsync($"adminusers/setrole/{Id}-Admin");
-        if(response.StatusCode == System.Net.HttpStatusCode.OK)
+        using var response = await Http.GetAsync($"api/v1/admin-users/setrole/{Id}-Admin");
+        if (response.StatusCode == System.Net.HttpStatusCode.OK)
             _user.Role = "Admin";
     }
 
     public async Task GiveUser()
     {
-        using var response = await Http.GetAsync($"adminusers/setrole/{Id}-User");
-        if(response.StatusCode == System.Net.HttpStatusCode.OK)
+        using var response = await Http.GetAsync($"api/v1/admin-users/setrole/{Id}-User");
+        if (response.StatusCode == System.Net.HttpStatusCode.OK)
             _user.Role = "User";
     }
 }

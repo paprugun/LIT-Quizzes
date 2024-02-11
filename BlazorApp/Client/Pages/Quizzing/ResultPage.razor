@@ -4,55 +4,69 @@
 @inject HttpClient Http
 @inject NavigationManager Nv
 @layout EmptyLayout
-<button @onclick="Back" class="btn btn-outline-dark oi oi-arrow-left"></button>
-<br/>
-<h2> @_result.Quiz.Name</h2>
-<br />
-<h4> Результат: </h4>
-@if (_result.CountOfCurrentAnswers >= _result.CountOfIncorrectAnswers)
+
+@if (_result == null)
 {
-    <strong class="text-success"> @_result.CountOfCurrentAnswers / @_questionsCount</strong>
+    <h1>Loading...</h1>
 }
 else
 {
-    <strong class="text-danger"> @_result.CountOfCurrentAnswers / @_questionsCount</strong>
-}
-<br />
-<h5> Вірні відповіді, перевір себе:</h5>
-<hr />
-<div class="container">
-    @foreach (var question in _result.Quiz.Questions)
-    {
-        <h4>@question.Question</h4>
-        @foreach (var answer in question.Answers)
-        {
-            if (answer.IsCorrect)
+    <div class="px-4" style="padding-top: 15px;">
+        <button @onclick="Back" class="btn btn-outline-dark oi oi-arrow-left"></button>
+        <div class="d-flex flex-column">
+            <h2 class="text-center"> @_result.Quiz.Name</h2>
+            <button class="btn btn-warning text-center" style="width: 60%; margin: 0 auto;" @onclick='() => Nv.NavigateTo($"passQuiz/{_result.Quiz.Id}")'>
+                Переробити тест
+            </button>
+        </div>
+        <div class="px-4" style="padding-bottom:10px; padding-top: 10px;">
+            <h3> Результат: </h3>
+            @if (_result.CountOfCorrectAnswers >= _result.CountOfIncorrectAnswers)
             {
-                <p class="text-success">@answer.Text</p>
+                <h4><strong class="text-success">@_result.CountOfCorrectAnswers / @_questionsCount</strong></h4>
             }
-            else 
+            else
             {
-                <p class="text-danger">@answer.Text</p> 
+                <h4><strong class="text-danger">@_result.CountOfCorrectAnswers / @_questionsCount</strong></h4>
             }
-        }
+        </div>
+        <h2><strong>Вірні відповіді, перевір себе:</strong></h2>
         <hr />
-    }
-</div>
+        <div class="container">
+            @foreach (var question in _result.Quiz.Questions)
+            {
+                <h4>@question.Question</h4>
+                @foreach (var answer in question.Answers)
+                {
+                    if (answer.IsCorrect)
+                    {
+                        <h5 class="text-success">@answer.Text</h5>
+                    }
+                    else
+                    {
+                        <h5 class="text-danger">@answer.Text</h5>
+                    }
+                }
+                <hr />
+            }
+        </div>
+    </div>
+}
 
 
 
 @code {
     [Parameter]
     public int Id { get; set; } = 0;
-    private UserResultResponse _result { get; set; } = new UserResultResponse();
+    private UserResultResponseModel _result { get; set; }
     private int _questionsCount;
 
     protected override async Task OnInitializedAsync()
     {
-        using var resposne = await Http.GetAsync($"profile/getResult/{Id}");
-        var _model = await resposne.Content.ReadFromJsonAsync<UserResultResponse>();
+        using var resposne = await Http.GetAsync($"api/v1/profile/getResult/{Id}");
+        var _model = await resposne.Content.ReadFromJsonAsync<UserResultResponseModel>();
         _result = _model;
-        _questionsCount = _result.CountOfCurrentAnswers + _result.CountOfIncorrectAnswers;
+        _questionsCount = _result.CountOfCorrectAnswers + _result.CountOfIncorrectAnswers;
 
     }
 

@@ -1,4 +1,7 @@
 ﻿@page "/admin"
+@using BlazorApp.Client.Services;
+@using BlazorApp.Shared.Models.Enums;
+@using BlazorApp.Shared.Models.RequestModels.Pagination;
 @using BlazorApp.Shared.Models.RequestModels.Quiz
 @using BlazorApp.Shared.Models.ResponseModel.Session
 @using BlazorApp.Shared.Models.ResponseModel.Stats
@@ -6,6 +9,7 @@
 @using System.Diagnostics.CodeAnalysis
 @using Microsoft.AspNetCore.Authorization
 @using System.Text.Json
+@inject IQuizService Service
 @layout AdminLayout
 @inject HttpClient Http
 @inject NavigationManager Nv
@@ -114,8 +118,8 @@
         }
         else
         {
-            await GetStats();
-            await GetTable();
+            var response = await Service.GetAll(new PaginationRequestModel<QuizTableColumn>());
+            _allQuizzes = response.Data;
         }
     }
 
@@ -133,13 +137,5 @@
         using var topicsResponse = await Http.GetAsync($"moderatorpage/topicstats");
         var topicsModel = await topicsResponse.Content.ReadFromJsonAsync<TopicsStatsResponseModel>();
         _topics = topicsModel;
-    }
-
-    private async Task GetTable()
-    {
-
-        using var resposne = await Http.GetAsync($"moderatorpage/");
-        var model = await resposne.Content.ReadFromJsonAsync<IEnumerable<SmallQuizResponse>>();
-        _allQuizzes = model.ToList();
     }
 }

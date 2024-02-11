@@ -78,7 +78,7 @@ else
 
 @code {
     RegistrationResponse user = null;
-    LoginResponse loginModel = null;
+    LoginResponseModel loginModel = null;
     string name = null;
     string email = null;
     string password = null;
@@ -116,7 +116,7 @@ else
     {
         var postBody = new LoginRequest() {Email = email, Password = password};
         using var response = await Http.PostAsJsonAsync("account/login", postBody);
-        var _model = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        var _model = await response.Content.ReadFromJsonAsync<LoginResponseModel>();
         loginModel = _model;
 
         errorString = loginModel.User.Id.ToString() + " " + loginModel.User.Role;
@@ -128,7 +128,7 @@ else
     {
         var postBody = new AdminLoginRequest() {Email = email, Password = password};
         using var response = await Http.PostAsJsonAsync("account/loginAdmin", postBody);
-        var _model = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        var _model = await response.Content.ReadFromJsonAsync<LoginResponseModel>();
         loginModel = _model;
 
         errorString = loginModel.User.Id.ToString() + " " + loginModel.User.Role;

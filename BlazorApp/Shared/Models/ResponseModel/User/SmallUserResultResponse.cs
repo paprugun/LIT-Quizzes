@@ -9,7 +9,9 @@ namespace BlazorApp.Shared.Models.ResponseModel.User
     public class SmallUserResultResponse
     {
         public int Id { get; set; }
+        public int UserId { get; set; }
         public int QuizId { get; set; }
+        public string UserName { get; set; }
         public string QuizName { get; set; }
         public int CountOfCorrectAnswers { get; set; }
         public int CountOfIncorrectAnswers { get; set; }

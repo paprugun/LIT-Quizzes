@@ -66,8 +66,8 @@ namespace BlazorApp.Services.Services
                             .Include(w => w.UserRoles)
                                 .ThenInclude(w => w.Role)
                             .Include(w => w.Profile)
-                                .ThenInclude(w => w.User)
-                                .FirstOrDefault(); 
+                            .FirstOrDefault(); 
+
             user.Profile.FirstName = model.FirstName;
             user.Profile.LastName = model.LastName;
             user.Profile.AvatarId = model.ImageId;
@@ -118,24 +118,14 @@ namespace BlazorApp.Services.Services
             var user = _unitOfWork.Repository<ApplicationUser>().Get(x => x.Id == _userId)
                 .Include(w => w.QuizzesResults)
                     .ThenInclude(w => w.Quiz)
+                        .ThenInclude(w => w.Questions)
+                            .ThenInclude(w => w.Answers)
                 .FirstOrDefault();
 
             if (user.QuizzesResults.FirstOrDefault(w => w.Id == resultId) == null)
-                throw new CustomException(HttpStatusCode.Forbidden, "resultId is invalid", "result isnt found");
+                throw new CustomException(HttpStatusCode.BadRequest, "resultId is invalid", "result isnt found");
 
-            var quiz = _mapper.Map<QuizResponseModel>(user.QuizzesResults.FirstOrDefault(x => x.Id == resultId).Quiz);
-            var questionEntities = _unitOfWork.Repository<QuizQuestion>().Get(x => x.QuizId == quiz.Id).ToList();
-            var questions = _mapper.Map<List<QuizQuestionResponseModel>>(questionEntities);
-
-            foreach (var question in questions) 
-            {
-                var asnwerEntities = _unitOfWork.Repository<QuizAnswer>().Get(x => x.QuestionId == question.Id).ToList();
-                var answers = _mapper.Map<List<QuizAnswerResponseModel>>(asnwerEntities);
-                question.Answers.AddRange(answers);
-            }
-            quiz.Questions.AddRange(questions);
             var response = _mapper.Map<UserResultResponseModel>(user.QuizzesResults.FirstOrDefault(x => x.Id == resultId));
-            response.Quiz = quiz;
             return response;
         }
     }

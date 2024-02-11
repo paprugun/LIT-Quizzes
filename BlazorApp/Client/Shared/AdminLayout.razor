@@ -28,15 +28,15 @@
 </div>
 </CascadingValue>
 @code {
-    private UserRoleResponse _user = null;
+    private UserRoleResponseModel _user = null;
     private string? json;
 
-    public async Task<UserRoleResponse?> GetUser()
+    public async Task<UserRoleResponseModel?> GetUser()
     {
         json = await JS.InvokeAsync<string>("localStorage.getItem", "user");
         if (json != null)
         {
-            _user = JsonSerializer.Deserialize<UserRoleResponse>(json);
+            _user = JsonSerializer.Deserialize<UserRoleResponseModel>(json);
             return _user;
         }
         return null;
