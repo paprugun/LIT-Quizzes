@@ -13,9 +13,15 @@ namespace BlazorApp.Services.Interfaces.CourseServices
     {
         Task<CourseResponseModel> CreateCourse(CourseRequestModel model);
 
+        Task<LessonResponseModel> CreateLesson(LessonRequestModel model);
+
+        Task<LessonResponseModel> UpdateLesson(LessonRequestModel model, int id);
+
         Task<AdminCourseResponseModel> UpdateCourse(CourseRequestModel model, int id);
 
         Task DeleteCourse(int id);
+
+        Task DeleteLesson(int id);
 
         Task<CourseResponseModel> GetCourse(int id);
 

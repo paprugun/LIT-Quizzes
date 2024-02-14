@@ -28,7 +28,7 @@ namespace BlazorApp.DAL
         public virtual DbSet<QuizQuestion> QuizQuestions { get; set; }
         public virtual DbSet<QuizAnswer> QuizAnswers { get; set; }
         public virtual DbSet<UsersResults> UsersResults { get; set; }
-        public virtual DbSet<CoursesQuizzes> CoursesQuizzes { get; set; }
+        public virtual DbSet<LessonQuizzes> CoursesQuizzes { get; set; }
         public virtual DbSet<UsersCourses> UsersCourses { get; set; }
 
         #region DbSet for stored procedures

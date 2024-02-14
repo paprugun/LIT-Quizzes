@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BlazorApp.DAL.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20240102120937_Init")]
+    [Migration("20240211223018_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -298,9 +298,6 @@ namespace BlazorApp.DAL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("ContentURLs")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
@@ -313,12 +310,17 @@ namespace BlazorApp.DAL.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("TopicId")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TopicId");
 
                     b.ToTable("Courses");
                 });
 
-            modelBuilder.Entity("BlazorApp.Domain.Entities.QuizEntities.CoursesQuizzes", b =>
+            modelBuilder.Entity("BlazorApp.Domain.Entities.QuizEntities.CourseLesson", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -327,12 +329,40 @@ namespace BlazorApp.DAL.Migrations
                     b.Property<int>("CourseId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("Time")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("URL")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.ToTable("CourseLesson");
+                });
+
+            modelBuilder.Entity("BlazorApp.Domain.Entities.QuizEntities.LessonQuizzes", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LessonId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("QuizId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CourseId");
+                    b.HasIndex("LessonId");
 
                     b.HasIndex("QuizId");
 
@@ -357,7 +387,7 @@ namespace BlazorApp.DAL.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
 
-                    b.Property<double>("TimeToPass")
+                    b.Property<double?>("TimeToPass")
                         .HasColumnType("REAL");
 
                     b.Property<int>("TopicId")
@@ -647,21 +677,43 @@ namespace BlazorApp.DAL.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("BlazorApp.Domain.Entities.QuizEntities.CoursesQuizzes", b =>
+            modelBuilder.Entity("BlazorApp.Domain.Entities.QuizEntities.Course", b =>
+                {
+                    b.HasOne("BlazorApp.Domain.Entities.QuizEntities.Topic", "Topic")
+                        .WithMany("Courses")
+                        .HasForeignKey("TopicId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Topic");
+                });
+
+            modelBuilder.Entity("BlazorApp.Domain.Entities.QuizEntities.CourseLesson", b =>
                 {
                     b.HasOne("BlazorApp.Domain.Entities.QuizEntities.Course", "Course")
-                        .WithMany("Quizzes")
+                        .WithMany("Lessons")
                         .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("BlazorApp.Domain.Entities.QuizEntities.LessonQuizzes", b =>
+                {
+                    b.HasOne("BlazorApp.Domain.Entities.QuizEntities.CourseLesson", "Lesson")
+                        .WithMany("Quizzes")
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("BlazorApp.Domain.Entities.QuizEntities.Quiz", "Quiz")
-                        .WithMany("Courses")
+                        .WithMany("Lessons")
                         .HasForeignKey("QuizId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Course");
+                    b.Navigation("Lesson");
 
                     b.Navigation("Quiz");
                 });
@@ -799,14 +851,19 @@ namespace BlazorApp.DAL.Migrations
 
             modelBuilder.Entity("BlazorApp.Domain.Entities.QuizEntities.Course", b =>
                 {
-                    b.Navigation("Quizzes");
+                    b.Navigation("Lessons");
 
                     b.Navigation("Users");
                 });
 
+            modelBuilder.Entity("BlazorApp.Domain.Entities.QuizEntities.CourseLesson", b =>
+                {
+                    b.Navigation("Quizzes");
+                });
+
             modelBuilder.Entity("BlazorApp.Domain.Entities.QuizEntities.Quiz", b =>
                 {
-                    b.Navigation("Courses");
+                    b.Navigation("Lessons");
 
                     b.Navigation("Questions");
 
@@ -820,6 +877,8 @@ namespace BlazorApp.DAL.Migrations
 
             modelBuilder.Entity("BlazorApp.Domain.Entities.QuizEntities.Topic", b =>
                 {
+                    b.Navigation("Courses");
+
                     b.Navigation("Quizzes");
                 });
 #pragma warning restore 612, 618

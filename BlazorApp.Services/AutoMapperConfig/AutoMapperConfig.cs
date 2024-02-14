@@ -149,28 +149,33 @@ namespace ApplicationAuth.Services.StartApp
                 .ForMember(t => t.Id, opt => opt.MapFrom(x => x.Id))
                 .ForMember(t => t.Name, opt => opt.MapFrom(x => x.Name))
                 .ForMember(t => t.Description, opt => opt.MapFrom(x => x.Description))
-                .ForMember(t => t.ContentURLs, opt => opt.MapFrom(x => x.ContentURLs))
+                .ForMember(t => t.Lessons, opt => opt.MapFrom(x => x.Lessons))
                 .ForMember(t => t.Difficult, opt => opt.MapFrom(x => x.Difficult))
                 .ForMember(t => t.Language, opt => opt.MapFrom(x => x.Language))
-                .ForMember(t => t.Topics, opt => opt.MapFrom(x => x.Quizzes.Select(c => c.Quiz.Topic.Name)))
-                //.ForMember(t => t.UsersResults, opt => opt.MapFrom(x => x.Users))
-                .ForMember(t => t.Quizzes, opt => opt.MapFrom(x => x.Quizzes.Select(c => c.QuizId)));
+                .ForMember(t => t.Topic, opt => opt.MapFrom(x => x.Topic));
+
+            CreateMap<CourseLesson, LessonResponseModel>()
+                .ForMember(t => t.Id, opt => opt.MapFrom(x => x.Id))
+                .ForMember(t => t.CourseId, opt => opt.MapFrom(x => x.CourseId))
+                .ForMember(t => t.Name, opt => opt.MapFrom(x => x.Name))
+                .ForMember(t => t.Description, opt => opt.MapFrom(x => x.Description))
+                .ForMember(t => t.Quizzes, opt => opt.Ignore())
+                .ForMember(t => t.Time, opt => opt.MapFrom(x => x.Time))
+                .ForMember(t => t.URL, opt => opt.MapFrom(x => x.URL));
 
             CreateMap<Course, AdminCourseResponseModel>()
                 .ForMember(t => t.Id, opt => opt.MapFrom(x => x.Id))
                 .ForMember(t => t.Name, opt => opt.MapFrom(x => x.Name))
                 .ForMember(t => t.Description, opt => opt.MapFrom(x => x.Description))
-                .ForMember(t => t.ContentURLs, opt => opt.MapFrom(x => x.ContentURLs))
+                .ForMember(t => t.Lessons, opt => opt.MapFrom(x => x.Lessons))
                 .ForMember(t => t.Difficult, opt => opt.MapFrom(x => x.Difficult))
                 .ForMember(t => t.Language, opt => opt.MapFrom(x => x.Language))
-                .ForMember(t => t.Topics, opt => opt.MapFrom(x => x.Quizzes.Select(c => c.Quiz.Topic.Name)))
-                .ForMember(t => t.Quizzes, opt => opt.MapFrom(x => x.Quizzes.Select(c => c.QuizId)));
+                .ForMember(t => t.Topic, opt => opt.MapFrom(x => x.Topic));
                 //.ForMember(t => t.UsersResults, opt => opt.MapFrom(x => x.Quizzes.Select(c => c.Quiz).Select(c => c.Users).ToList()));
 
             CreateMap<CourseRequestModel, Course>()
                 .ForMember(t => t.Name, opt => opt.MapFrom(x => x.Name))
                 .ForMember(t => t.Description, opt => opt.MapFrom(x => x.Description))
-                .ForMember(t => t.ContentURLs, opt => opt.MapFrom(x => x.ContentURLs))
                 .ForMember(t => t.Difficult, opt => opt.MapFrom(x => x.Difficult))
                 .ForMember(t => t.Language, opt => opt.MapFrom(x => x.Language));
 
@@ -178,7 +183,7 @@ namespace ApplicationAuth.Services.StartApp
                .ForMember(t => t.Id, opt => opt.MapFrom(x => x.Id))
                .ForMember(t => t.Name, opt => opt.MapFrom(x => x.Name))
                .ForMember(t => t.Difficult, opt => opt.MapFrom(x => x.Difficult))
-               .ForMember(t => t.Topic, opt => opt.MapFrom(x => x.Quizzes.Select(c => c.Quiz.Topic.Name).FirstOrDefault()))
+               .ForMember(t => t.Topic, opt => opt.MapFrom(x => x.Topic))
                .ForMember(t => t.Language, opt => opt.MapFrom(x => x.Language));
 
             #endregion

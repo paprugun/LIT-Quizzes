@@ -33,11 +33,25 @@ namespace BlazorApp.Server.Controllers.API.Admin
             return Created(new JsonResponse<CourseResponseModel>(response));
         }
 
+        [HttpPost("lesson")]
+        public async Task<IActionResult> Create([FromBody] LessonRequestModel model)
+        {
+            var response = await _courseService.CreateLesson(model);
+            return Created(new JsonResponse<LessonResponseModel>(response));
+        }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> Update([FromBody] CourseRequestModel model, [FromRoute] int id) 
         {
             var response = await _courseService.UpdateCourse(model, id);
             return Ok(new JsonResponse<AdminCourseResponseModel>(response));
+        }
+
+        [HttpPut("lesson/{id}")]
+        public async Task<IActionResult> UpdateLesson([FromBody] LessonRequestModel model, [FromRoute] int id)
+        {
+            var response = await _courseService.UpdateLesson(model, id);
+            return Ok(new JsonResponse<LessonResponseModel>(response));
         }
 
         [HttpGet("{id}")]
@@ -52,6 +66,13 @@ namespace BlazorApp.Server.Controllers.API.Admin
         {
             await _courseService.DeleteCourse(id);
             return Ok(new JsonResponse<MessageResponseModel>(new MessageResponseModel($"Course {id} was deleted")));
+        }
+
+        [HttpDelete("lesson/{id}")]
+        public async Task<IActionResult> DeleteLesson([FromRoute] int id)
+        {
+            await _courseService.DeleteLesson(id);
+            return Ok(new JsonResponse<MessageResponseModel>(new MessageResponseModel($"Lesson {id} was deleted")));
         }
     }
 }

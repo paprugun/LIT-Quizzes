@@ -13,14 +13,11 @@ namespace BlazorApp.Models.ResponseModels.Course
 
         public string CourseName { get; set; }
 
-        public string[] Topics { get; set; }
+        public string Topic { get; set; }
 
         public string Language { get; set; }
 
-        public string ContentURLs { get; set; }
+        public List<LessonResponseModel> Lessons { get; set; }
 
-        public List<SmallUserResultResponseModel> Results { get; set; }
-
-        public List<(int, string)> NotFinishedQuizzes { get; set; }
     }
 }

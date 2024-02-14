@@ -8,18 +8,18 @@ using System.Threading.Tasks;
 
 namespace BlazorApp.Domain.Entities.QuizEntities
 {
-    public class CoursesQuizzes : IEntity<int>
+    public class LessonQuizzes : IEntity<int>
     {
         public int Id { get; set; }
 
-        public int CourseId { get; set; }
+        public int LessonId { get; set; }
 
         public int QuizId { get; set; }
 
         [InverseProperty("Quizzes")]
-        public virtual Course Course { get; set; }
+        public virtual CourseLesson Lesson { get; set; }
 
-        [InverseProperty("Courses")]
+        [InverseProperty("Lessons")]
         public virtual Quiz Quiz { get; set; }
 
     }

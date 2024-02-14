@@ -16,6 +16,8 @@ namespace BlazorApp.Domain.Entities.QuizEntities
 
         public string Name { get; set; }
 
+        public int TopicId { get; set; }
+
         public string Description { get; set; }
 
         [DefaultValue(1)]
@@ -24,11 +26,14 @@ namespace BlazorApp.Domain.Entities.QuizEntities
         [DefaultValue("Англійська")]
         public string Language { get; set; }
 
-        public string ContentURLs { get; set; }
-
         #region Navigation Properties
+
+        [ForeignKey("TopicId")]
+        [InverseProperty("Courses")]
+        public virtual Topic Topic { get; set; }
+
         [InverseProperty("Course")]
-        public virtual ICollection<CoursesQuizzes> Quizzes { get; set; }
+        public virtual ICollection<CourseLesson> Lessons { get; set; }
 
         [InverseProperty("Course")]
         public virtual ICollection<UsersCourses> Users { get; set; }

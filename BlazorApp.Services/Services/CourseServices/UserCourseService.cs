@@ -65,7 +65,7 @@ namespace BlazorApp.Services.Services.CourseServices
                                                                 .FirstOrDefault();
 
             if (user.Courses.Any(x => x.CourseId == courseId))
-                throw new CustomException(HttpStatusCode.Forbidden, "invalid courseId", "course already exist in user.Courses");
+                throw new CustomException(HttpStatusCode.Forbidden, "invalid courseId", "You are already following that course");
 
             var course = _unitOfWork.Repository<Course>().Get(x => x.Id == courseId).FirstOrDefault();
 
@@ -82,48 +82,48 @@ namespace BlazorApp.Services.Services.CourseServices
         }
         public async Task<AssignmentResponseModel> GetAssignment(int userCourseId)
         {
-            /*var usersCourses = _unitOfWork.Repository<ApplicationUser>().Get(x => x.Id == _userId)
-                                                                        .Include(w => w.Profile)
-                                                                        .Include(w => w.Courses)
-                                                                            .ThenInclude(w => w.Course)
-                                                                                .ThenInclude(w => w.Quizzes)
-                                                                                    .ThenInclude(w => w.Quiz)
-                                                                                        .ThenInclude(w => w.Topic)
-                                                                        .FirstOrDefault().Courses
-                                                                        .FirstOrDefault(x => x.CourseId == courseId);*/
-
             var courses = _unitOfWork.Repository<UsersCourses>().Get(x => x.Id == userCourseId).ToList();
 
             var usersCourses = _unitOfWork.Repository<UsersCourses>().Get(x => x.UserId == _userId.Value && x.Id == userCourseId)
                                                                                                     .Include(w => w.Course)
+                                                                                                        .ThenInclude(w => w.Lessons)
                                                                                                         .ThenInclude(w => w.Quizzes)
                                                                                                             .ThenInclude(w => w.Quiz)
                                                                                                                 .ThenInclude(w => w.Topic)
                                                                                                     .Include(w => w.User)
                                                                                                         .ThenInclude(w => w.Profile)
+                                                                                                    .Include(w => w.Course)
+                                                                                                        .ThenInclude(w => w.Topic)
                                                                                                     .FirstOrDefault();
             var response = new AssignmentResponseModel()
             {
                 Id = userCourseId,
-                ContentURLs = usersCourses.Course.ContentURLs,
                 CourseName = usersCourses.Course.Name,
                 Language = usersCourses.Course.Language,
-                Topics = usersCourses.Course.Quizzes.Select(w => w.Quiz.Topic.Name).ToArray(),
+                Topic = usersCourses.Course.Topic.Name,
             };
 
-            var userResults = _unitOfWork.Repository<UsersResults>().Get(x => x.UserId == _userId.Value && usersCourses.Course.Quizzes.Select(w => w.QuizId).Any(w => w == x.QuizId))
-                                                                        .Include(w => w.Quiz);
+            response.Lessons = _mapper.Map<List<LessonResponseModel>>(usersCourses.Course.Lessons);
 
-            if (userResults != null)
-                response.Results = _mapper.Map<List<SmallUserResultResponseModel>>(userResults);
-
-            var nonFoundQuizzesResults = _unitOfWork.Repository<Quiz>().Get(x => usersCourses.Course.Quizzes.Select(w => w.QuizId).Any(w => w == x.Id) && !userResults.Select(w => w.Quiz).Contains(x)).Include(w => w.Topic).Select(x => new
+            response.Lessons.ForEach(lesson =>
             {
-                Id = x.Id,
-                Name = x.Name,
+                lesson.Quizzes = usersCourses.Course.Lessons
+                    .Where(w => w.Id == lesson.Id)
+                    .SelectMany(w => w.Quizzes)
+                    .Select(c => (c.QuizId, c.Quiz.Name))
+                    .ToList();
             });
 
-            response.NotFinishedQuizzes = nonFoundQuizzesResults.AsEnumerable().Select(x => ((int)x.Id, (string)x.Name)).ToList();
+            var userResults = _unitOfWork.Repository<UsersResults>().Get(ur => ur.UserId == _userId.Value)
+                                                                    .Include(ur => ur.Quiz)
+                                                                    .ToList();
+
+            response.Lessons.ForEach(lesson => {
+                lesson.Results = userResults
+                    .Where(ur => lesson.Quizzes.Any(q => q.Item1 == ur.QuizId))
+                    .Select(ur => _mapper.Map<SmallUserResultResponseModel>(ur))
+                    .ToList();
+            });
 
             return response;
         }
@@ -134,12 +134,13 @@ namespace BlazorApp.Services.Services.CourseServices
             var search = !string.IsNullOrEmpty(model.Search) && model.Search.Length > 1;
 
             var courses = _unitOfWork.Repository<ApplicationUser>()
-                             .Get(x => x.Id == _userId.Value && x.Courses.Any(w => w.Course.ContentURLs.Length > 1) &&
+                             .Get(x => x.Id == _userId.Value && x.Courses.Any(w => w.Course.Lessons.Count > 0) &&
                                  (!search || x.Courses.Any(c => c.Course.Name.Contains(model.Search) ||
                                      c.Course.Description.Contains(model.Search) ||
                                      c.Course.Language.Contains(model.Search))))
                              .Include(x => x.Courses)
                                 .ThenInclude(x => x.Course)
+                                .ThenInclude(x => x.Lessons)
                                     .ThenInclude(x => x.Quizzes)
                                         .ThenInclude(x => x.Quiz)
                                             .ThenInclude(x => x.Topic)
@@ -151,8 +152,8 @@ namespace BlazorApp.Services.Services.CourseServices
                                  course.Description,
                                  course.Difficult,
                                  course.Language,
-                                 course.ContentURLs,
-                                 Topic = course.Quizzes.Select(w => w.Quiz).FirstOrDefault().Topic.Name
+                                 //course.Lessons, маппить уроки в респонс модельку
+                                 Topic = course.Topic.Name
                              });
 
 
@@ -171,7 +172,7 @@ namespace BlazorApp.Services.Services.CourseServices
                     Name = course.Name,
                     Difficult = (int)course.Difficult,
                     Language = course.Language,
-                    LessonsCount = course.ContentURLs?.Split(" ").Length ?? 0,
+                    //LessonsCount = course.Lessons.Count,
                     Topic = course.Topic,
                     Id = course.Id
                 };
@@ -182,20 +183,24 @@ namespace BlazorApp.Services.Services.CourseServices
             return new(response, count);
         }
 
-        public CursorPaginationBaseResponseModel<Models.ResponseModels.Course.UserCourseResultResponseModel> GetAssignments(CursorPaginationRequestModel<CourseTableColumn> model)
+        public CursorPaginationBaseResponseModel<UserCourseResultResponseModel> GetAssignments(CursorPaginationRequestModel<CourseTableColumn> model)
         {
             var search = !string.IsNullOrEmpty(model.Search) && model.Search.Length > 1;
 
             var courses = _unitOfWork.Repository<ApplicationUser>()
-                             .Get(x => x.Id == _userId.Value && x.Courses.Any(w => w.Course.ContentURLs.Length > 1) &&
+                             .Get(x => x.Id == _userId.Value && x.Courses.Any(w => w.Course.Lessons.Count > 0) &&
                                  (!search || x.Courses.Any(c => c.Course.Name.Contains(model.Search) ||
                                      c.Course.Description.Contains(model.Search) ||
                                      c.Course.Language.Contains(model.Search))))
                              .Include(x => x.Courses)
                                 .ThenInclude(x => x.Course)
+                                    .ThenInclude(x => x.Lessons)
                                     .ThenInclude(x => x.Quizzes)
                                         .ThenInclude(x => x.Quiz)
                                             .ThenInclude(x => x.Topic)
+                             .Include(x => x.Courses)
+                                .ThenInclude(x => x.Course)
+                                    .ThenInclude(x => x.Topic)
                              .SelectMany(x => x.Courses)
                              .Select(userCourse => new UserCourseResultResponseModel
                              {
@@ -204,8 +209,8 @@ namespace BlazorApp.Services.Services.CourseServices
                                  CourseId = userCourse.CourseId,
                                  UserId = _userId.Value,
                                  UserName = userCourse.User.UserName,
-                                 CountOfDoneSteps = userCourse.User.QuizzesResults.Where(w => userCourse.Course.Quizzes.Select(c => c.QuizId).Contains(w.QuizId)).Count(),
-                                 CountOfLeftSteps = userCourse.Course.Quizzes.Count() - userCourse.User.QuizzesResults.Where(w => userCourse.Course.Quizzes.Select(c => c.QuizId).Contains(w.QuizId)).Count()
+                                 CountOfDoneSteps = userCourse.User.QuizzesResults.Where(w => userCourse.Course.Lessons.SelectMany(c => c.Quizzes.Select(q => q.QuizId)).Contains(w.QuizId)).Count(),
+                                 CountOfLeftSteps = userCourse.Course.Lessons.Select(w => w.Quizzes).Count() - userCourse.User.QuizzesResults.Where(w => userCourse.Course.Lessons.SelectMany(c => c.Quizzes.Select(q => q.QuizId)).Contains(w.QuizId)).Count(),
                              });
 
             if (search)

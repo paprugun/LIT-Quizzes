@@ -8,24 +8,30 @@
 @inject HttpClient Http
 @inject NavigationManager Nv
 <CascadingValue Value="this">
-<div class="page">
-    <div class="sidebar">
-        <AdminNavBar></AdminNavBar>
-    </div>
-
-    <div class="main">
-        <div class="top-row px-4">
+    <div class="page">
+        <div class="sidebar">
+            <AdminNavBar></AdminNavBar>
         </div>
 
-        @*Application level state provider*@
-        <BlazorApp.Client.Shared.Pagination.PageIndexStateProvider>
-            <div class="content px-4">
-                @Body
+        <div class="main">
+            <div class="top-row px-4">
             </div>
-        </BlazorApp.Client.Shared.Pagination.PageIndexStateProvider>
 
+            @*Application level state provider*@
+            <BlazorApp.Client.Shared.Pagination.PageIndexStateProvider>
+                <div class="content px-4">
+                    @Body
+                </div>
+            </BlazorApp.Client.Shared.Pagination.PageIndexStateProvider>
+
+
+            <BlazoredToasts Position="Blazored.Toast.Configuration.ToastPosition.TopRight"
+                            Timeout="10"
+                            IconType="IconType.FontAwesome"
+                            SuccessIcon="oi oi-thumb-up"
+                            ErrorIcon="oi oi-bug" />
+        </div>
     </div>
-</div>
 </CascadingValue>
 @code {
     private UserRoleResponseModel _user = null;
@@ -54,11 +60,11 @@
     }
 
     public async Task Logout()
-	{
-		_user = null;
-		await Http.GetAsync($"account/logout");
-		await JS.InvokeVoidAsync("localStorage.removeItem", "user");
-		Nv.NavigateTo("/");
-		StateHasChanged();
-	}
+    {
+        _user = null;
+        await Http.GetAsync($"account/logout");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "user");
+        Nv.NavigateTo("/");
+        StateHasChanged();
+    }
 }

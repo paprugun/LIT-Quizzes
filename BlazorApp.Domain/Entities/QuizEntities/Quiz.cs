@@ -17,7 +17,7 @@ namespace BlazorApp.Domain.Entities.QuizEntities
         public int TopicId { get; set; }
         public string Name { get; set; }
         public string Author { get; set; }
-        public double TimeToPass { get; set; }
+        public double? TimeToPass { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; }
 
@@ -26,7 +26,7 @@ namespace BlazorApp.Domain.Entities.QuizEntities
         public virtual Topic Topic { get; set; }
 
         [InverseProperty("Quiz")]
-        public virtual ICollection<CoursesQuizzes> Courses { get; set; }
+        public virtual ICollection<LessonQuizzes> Lessons { get; set; }
 
         [InverseProperty("Quiz")]
         public virtual ICollection<QuizQuestion> Questions { get; set; }

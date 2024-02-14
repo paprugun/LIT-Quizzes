@@ -57,23 +57,6 @@ namespace BlazorApp.DAL.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Courses",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    Description = table.Column<string>(type: "TEXT", nullable: true),
-                    Difficult = table.Column<int>(type: "INTEGER", nullable: false),
-                    Language = table.Column<string>(type: "TEXT", nullable: true),
-                    ContentURLs = table.Column<string>(type: "TEXT", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Courses", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Topics",
                 columns: table => new
                 {
@@ -308,6 +291,77 @@ namespace BlazorApp.DAL.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Courses",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Name = table.Column<string>(type: "TEXT", nullable: true),
+                    TopicId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Description = table.Column<string>(type: "TEXT", nullable: true),
+                    Difficult = table.Column<int>(type: "INTEGER", nullable: false),
+                    Language = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Courses", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Courses_Topics_TopicId",
+                        column: x => x.TopicId,
+                        principalTable: "Topics",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Quizzes",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    UserId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TopicId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: true),
+                    Author = table.Column<string>(type: "TEXT", nullable: true),
+                    TimeToPass = table.Column<double>(type: "REAL", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Quizzes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Quizzes_Topics_TopicId",
+                        column: x => x.TopicId,
+                        principalTable: "Topics",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CourseLesson",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    CourseId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: true),
+                    Description = table.Column<string>(type: "TEXT", nullable: true),
+                    URL = table.Column<string>(type: "TEXT", nullable: true),
+                    Time = table.Column<double>(type: "REAL", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CourseLesson", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CourseLesson_Courses_CourseId",
+                        column: x => x.CourseId,
+                        principalTable: "Courses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UsersCourses",
                 columns: table => new
                 {
@@ -329,57 +383,6 @@ namespace BlazorApp.DAL.Migrations
                         name: "FK_UsersCourses_Courses_CourseId",
                         column: x => x.CourseId,
                         principalTable: "Courses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Quizzes",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    UserId = table.Column<int>(type: "INTEGER", nullable: false),
-                    TopicId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    Author = table.Column<string>(type: "TEXT", nullable: true),
-                    TimeToPass = table.Column<double>(type: "REAL", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Quizzes", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Quizzes_Topics_TopicId",
-                        column: x => x.TopicId,
-                        principalTable: "Topics",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "CoursesQuizzes",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    CourseId = table.Column<int>(type: "INTEGER", nullable: false),
-                    QuizId = table.Column<int>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_CoursesQuizzes", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_CoursesQuizzes_Courses_CourseId",
-                        column: x => x.CourseId,
-                        principalTable: "Courses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_CoursesQuizzes_Quizzes_QuizId",
-                        column: x => x.QuizId,
-                        principalTable: "Quizzes",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -430,6 +433,32 @@ namespace BlazorApp.DAL.Migrations
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_UsersResults_Quizzes_QuizId",
+                        column: x => x.QuizId,
+                        principalTable: "Quizzes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CoursesQuizzes",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    LessonId = table.Column<int>(type: "INTEGER", nullable: false),
+                    QuizId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CoursesQuizzes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CoursesQuizzes_CourseLesson_LessonId",
+                        column: x => x.LessonId,
+                        principalTable: "CourseLesson",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CoursesQuizzes_Quizzes_QuizId",
                         column: x => x.QuizId,
                         principalTable: "Quizzes",
                         principalColumn: "Id",
@@ -496,9 +525,19 @@ namespace BlazorApp.DAL.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_CoursesQuizzes_CourseId",
-                table: "CoursesQuizzes",
+                name: "IX_CourseLesson_CourseId",
+                table: "CourseLesson",
                 column: "CourseId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Courses_TopicId",
+                table: "Courses",
+                column: "TopicId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CoursesQuizzes_LessonId",
+                table: "CoursesQuizzes",
+                column: "LessonId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CoursesQuizzes_QuizId",
@@ -609,13 +648,16 @@ namespace BlazorApp.DAL.Migrations
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
+                name: "CourseLesson");
+
+            migrationBuilder.DropTable(
                 name: "QuizQuestions");
 
             migrationBuilder.DropTable(
-                name: "Courses");
+                name: "AspNetUsers");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
+                name: "Courses");
 
             migrationBuilder.DropTable(
                 name: "Quizzes");

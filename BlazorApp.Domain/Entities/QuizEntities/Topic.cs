@@ -14,5 +14,8 @@ namespace BlazorApp.Domain.Entities.QuizEntities
 
         [InverseProperty("Topic")]
         public virtual ICollection<Quiz> Quizzes { get; set; }
+
+        [InverseProperty("Topic")]
+        public virtual ICollection<Course> Courses { get; set; }
     }
 }

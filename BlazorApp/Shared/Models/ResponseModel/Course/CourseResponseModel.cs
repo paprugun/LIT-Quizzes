@@ -16,12 +16,10 @@ namespace BlazorApp.Shared.Models.ResponseModel.Course
 
         public int Difficult { get; set; }
 
-        public string[] Topics { get; set; }
+        public string Topic { get; set; }
 
         public string Language { get; set; }
 
-        public string ContentURLs { get; set; }
-
-        public List<int> Quizzes { get; set; }
+        public List<LessonResponseModel> Lessons { get; set; }
     }
 }

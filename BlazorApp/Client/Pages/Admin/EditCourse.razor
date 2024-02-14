@@ -2,6 +2,7 @@
 @using BlazorApp.Client.Services
 @using BlazorApp.Client.Shared.Pagination
 @using BlazorApp.Shared.Models.Enums
+@using BlazorApp.Shared.Models.RequestModels.Course
 @using BlazorApp.Shared.Models.RequestModels.Pagination
 @using BlazorApp.Shared.Models.ResponseModel.Course
 @using BlazorApp.Shared.Models.ResponseModel.Pagination
@@ -12,14 +13,15 @@
 @inject NavigationManager Nv
 @inject IJSRuntime JS
 @inject IQuizService QuizService
+@inject IToastService ToastService
 @layout AdminLayout
 
 <style>
-    .quiz-block{
-        border-radius:15px;
+    .quiz-block {
+        border-radius: 15px;
         border: 1px solid black;
         overflow: auto;
-        padding:15px;
+        padding: 15px;
     }
 
     .list-group {
@@ -28,61 +30,139 @@
         height: 100%;
     }
 
-    .list-group-item{
+    .list-group-item {
         display: flex;
         flex-direction: row;
     }
+
 </style>
 
 @if (_course != null)
 {
-    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal fade overflow-x-scroll" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Додати тест до @_course.Name</h5>
+                <div class="modal-header w-100">
+                    <h5 class="modal-title" id="exampleModalLabel">Уроки в @_course.Name</h5>
+                    @if (!_showInputs) 
+                    {
+                        <button type="button" class="btn btn-success oi oi-plus ml-5" @onclick="() => _showInputs = true"></button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-primary oi oi-action-undo ml-5" @onclick="() => _showInputs = false"></button>
+                    }
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="quiz-block">
-                        <div class="d-flex align-items-center justify-content-center h-100">
-                            <div class="d-flex flex-row">
-                                <div class="input-group mb-3">
-                                    <input type="text" class="form-control" placeholder="Пошук..." @onchange="(ChangeEventArgs e) => _filter = e.Value.ToString()">
-                                    <button class="btn btn-sm btn-outline-primary" type="button" @onclick="Search">Пошук</button>
-                                    @if (_filter != String.Empty)
-                                    {
-                                        <button class="btn-close" type="button" @onclick="CleanFilters" style="margin-left: 15px"></button>
-                                    }
+                    <!--Вот тут должны появлятся 3 инпута в ряд для имени, описания и url курса и кнопка потдверждения-->
+                    @if (_showInputs)
+                    {
+                        <div class="m-2">
+                            <EditForm Model="lessonRequest">
+                                <DataAnnotationsValidator />
+                                <div class="form-group">
+                                    <label for="lessonName">Назва</label>
+                                    <InputText id="lessonName" class="form-control" @bind-Value="lessonRequest.Name" />
+                                    <ValidationMessage For="@(() => lessonRequest.Name)" />
                                 </div>
-                            </div>
+                                <div class="form-group">
+                                    <label for="lessonDescription">Опис</label>
+                                    <InputTextArea id="lessonDescription" class="form-control" @bind-Value="lessonRequest.Description" />
+                                    <ValidationMessage For="@(() => lessonRequest.Description)" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="lessonURL">URL</label>
+                                    <InputText id="lessonURL" class="form-control" @bind-Value="lessonRequest.URL" />
+                                    <ValidationMessage For="@(() => lessonRequest.URL)" />
+                                </div>
+                                <button class="btn btn-primary" @onclick="AddLesson">Підтвердити</button>
+                            </EditForm>
                         </div>
-                        <ul class="list-group">
-                            @foreach (var item in _quizzes)
+                    }
+                    @if (_course.Lessons != null)
+                    {
+                        <div class="col justify-content-center">
+
+                            @foreach (var item in _course.Lessons)
                             {
-                                <li class="list-group-item">
-                                    <a class="justify-self-start" data-bs-dismiss="modal" @onclick='() => Nv.NavigateTo($"/editQuiz/{item.Id}")'><b>@item.Name</b></a>
-                                    <div class="w-100 float-end">
-                                        @if (_course.Quizzes.Contains(item.Id))
+                                <div class="row mb-2 justify-content-center">
+                                    <div class="card border-dark gx-4 h-100" style="max-width: 25rem;">
+                                    <div class="card-header h-25 d-flex flex-row">
+                                        <button class="btn-close m-1" @onclick="() => DeleteLesson(item.Id)"></button>
+                                        <h5 class=""><strong>@item.Name</strong></h5>
+                                    </div>
+                                    <div class="card-body h-75">
+                                        @if (item.Description.Length >= 100)
                                         {
-                                            <button class="btn btn-danger oi oi-trash" @onclick='() => RemoveQuiz(item.Id)'></button>
+                                            <p>
+                                                @(item.Description.Substring(0, 101) + "...");
+                                            </p>
                                         }
                                         else
                                         {
-                                            <button class="btn btn-outline-success oi oi-plus" @onclick='() => AddQuiz(item.Id)'></button>
+                                            <p>
+                                                @item.Description
+                                            </p>
                                         }
+                                        <div class="accordion mt-3" id="@($"accordion_{item.Id}")">
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header" id="@($"heading_{item.Id}")">
+                                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="@($"#collapse_{item.Id}")" aria-expanded="false" aria-controls="@($"collapse_{item.Id}")">
+                                                        Тести
+                                                    </button>
+                                                </h2>
+                                                <div id="@($"collapse_{item.Id}")" class="accordion-collapse collapse" aria-labelledby="@($"heading_{item.Id}")" data-bs-parent="#accordionExample">
+                                                    <div class="accordion-body">
+                                                        <div class="quiz-block">
+                                                            <div class="d-flex align-items-center justify-content-center h-100">
+                                                                <div class="d-flex flex-row">
+                                                                    <div class="input-group mb-3">
+                                                                        <input type="text" class="form-control" placeholder="Пошук..." @onchange="(ChangeEventArgs e) => _filter = e.Value.ToString()">
+                                                                        <button class="btn btn-sm btn-outline-primary" type="button" @onclick="Search">Пошук</button>
+                                                                        @if (_filter != String.Empty)
+                                                                        {
+                                                                            <button class="btn-close" type="button" @onclick="CleanFilters" style="margin-left: 15px"></button>
+                                                                        }
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <ul class="list-group">
+                                                                @foreach (var quiz in _quizzes)
+                                                                {
+                                                                    <li class="list-group-item">
+                                                                        <a class="justify-self-start" data-bs-dismiss="modal" @onclick='() => Nv.NavigateTo($"/editQuiz/{quiz.Id}")'><b>@quiz.Name</b></a>
+                                                                        <div class="w-100 float-end">
+                                                                            @if (item.Quizzes.Select(x => x.Item1).Contains(quiz.Id))
+                                                                            {
+                                                                                <button class="btn btn-danger oi oi-trash" @onclick='() => RemoveQuiz(quiz.Id, item.Id)'></button>
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                <button class="btn btn-outline-success oi oi-plus" @onclick='() => AddQuiz(quiz.Id, item.Id)'></button>
+                                                                            }
+                                                                        </div>
+                                                                    </li>
+                                                                }
+                                                            </ul>
+                                                            <div class="d-flex justify-content-center" style="margin:15px;">
+                                                                <MyPagination TotalPages="@(_totalPages != 0 ? _totalPages : 1)"
+                                                                              PageIndex="@State.PageIndex"
+                                                                              Radius="3"
+                                                                              OnSelectedPage="@SelectedPage">
+                                                                </MyPagination>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </li>
+                                </div>
+                                </div>
                             }
-                        </ul>
-                        <div class="d-flex justify-content-center" style="margin:15px;">
-                            <MyPagination TotalPages="@(_totalPages != 0 ? _totalPages : 1)"
-                                        PageIndex="@State.PageIndex"
-                                        Radius="3"
-                                        OnSelectedPage="@SelectedPage">
-                            </MyPagination>
                         </div>
-                    </div>
+                    }
                     <br>
                 </div>
             </div>
@@ -128,62 +208,42 @@
         </div>
     </div>
 
-    <div class="d-inline">
-    </div>
-
-    <div class="container-xxl">
+    <div class="container">
         <h1>@_course.Name</h1>
-        <EditForm Model="_updCourse" OnValidSubmit="SaveChanges">
-            <DataAnnotationsValidator />
-            @if (!isEditMode)
-            {
-                <div>
-                    <p>Посилання вводяться через пробіл у рядочок</p>
-                    <textarea readonly class="form-control">@_course.ContentURLs</textarea>
-                    <br />
-                    <button class="btn btn-primary" @onclick="EnterEditMode">Edit</button>
-                </div>
-            }
-            else
-            {
-                <div>
-                    <p>Edit the content below:</p>
-                    <InputTextArea @bind-Value="_updCourse.ContentURLs" class="form-control"></InputTextArea>
-                    <ValidationMessage For="@(() => _updCourse.ContentURLs)"></ValidationMessage>
-                    <br />
-                    <button class="btn btn-success" type="submit">Зберегти</button>
-                    <button class="btn btn-secondary" @onclick="CancelEdit">Відміна</button>
-                </div>
-            }
-        </EditForm>
+        <hr style="text-decoration-color:green" width="300px"/>
+        <h4>@_course.Topic</h4>
+        <h4>@_course.Description</h4>
     </div>
 
-    <div class="container d-flex flex-row row-cols-lg-2 row-cols-md-1 row-cols-sm-1 g-1">
-        <div class="col" style="height:250px">
-            <div class="card text-white bg-success gx-4 h-100" style="max-width: 20rem;">
-                <div class="card-header h-25 d-flex justify-content-center align-items-center"><h5 class="">Тести</h5></div>
-                <button class="card-body btn btn-dark h-75" data-bs-toggle="modal" data-bs-target="#exampleModal">
-                    <h4 class="card-title">Відкрити</h4>
-                </button>
-            </div>
-        </div>
-        <div class="col" style="height: 250px;">
-            <div class="card text-white bg-success gx-4 h-100" style="max-width: 20rem;">
-                <div class="card-header h-25 d-flex justify-content-center align-items-center">
-                    <h5 class="">Результати користувачей</h5>
+    <div class="container">
+        <div class="row g-4">
+            <div class="col">
+                <div class="card text-white bg-success gx-4" style="width: 20rem; height: 250px;">
+                    <div class="card-header d-flex justify-content-center align-items-center"><h5 class="">Уроки</h5></div>
+                    <button class="card-body btn btn-dark" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                        <h4 class="card-title">Відкрити</h4>
+                    </button>
                 </div>
-                <button class="card-body btn btn-dark h-75" data-bs-toggle="modal" data-bs-target="#exampleModal2">
-                    <h4 class="card-title">Відкрити</h4>
-                </button>
+            </div>
+            <div class="col">
+                <div class="card text-white bg-success gx-4" style="width: 20rem; height: 250px;">
+                    <div class="card-header d-flex justify-content-center align-items-center">
+                        <h5 class="">Результати користувачей</h5>
+                    </div>
+                    <button class="card-body btn btn-dark" data-bs-toggle="modal" data-bs-target="#exampleModal2">
+                        <h4 class="card-title">Відкрити</h4>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
+
+
 }
 else
 {
     <p>Loading..</p>
 }
-
 
 
 @code {
@@ -200,11 +260,14 @@ else
     CourseRequestModel _updCourse = new CourseRequestModel();
     List<SmallQuizResponse> _quizzes = new List<SmallQuizResponse>();
 
+    LessonRequestModel lessonRequest = new LessonRequestModel();
+
     private string _filter = String.Empty;
     private int _offset = 0;
-    private int _itemsPerPage = 10;
+    private int _itemsPerPage = 6;
     private int _totalPages = 0;
     private bool isEditMode;
+    bool _showInputs;
 
     private async Task SelectedPage(int selectedPageIndex)
     {
@@ -225,9 +288,21 @@ else
         else
         {
             using var response = await Http.GetAsync($"api/v1/admincourses/{Id}");
-            _course = JsonConvert.DeserializeObject<JsonResponse<AdminCourseResponseModel>>(await response.Content.ReadAsStringAsync()).Data;
-            _updCourse = new CourseRequestModel() { Name = _course.Name, Description = _course.Description, ContentURLs = _course.ContentURLs, Difficult = _course.Difficult, Language = _course.Language, QuizzesIds = _course.Quizzes.ToArray() };
-            await RefreshQuizzes(new PaginationRequestModel<QuizTableColumn>());
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorModel = JsonConvert.DeserializeObject<ErrorResponseModel>(await response.Content.ReadAsStringAsync());
+                if (errorModel.Code.Contains("UNAUTHORIZED"))
+                {
+                    Nv.NavigateTo("/accessdenied");
+                }
+                ToastService.ShowError(errorModel.Errors.FirstOrDefault().Message);
+            }
+            else
+            {
+                _course = JsonConvert.DeserializeObject<JsonResponse<AdminCourseResponseModel>>(await response.Content.ReadAsStringAsync()).Data;
+                _updCourse = new CourseRequestModel() { Name = _course.Name, Description = _course.Description, Difficult = _course.Difficult, Language = _course.Language };
+                await RefreshQuizzes(new PaginationRequestModel<QuizTableColumn>());
+            }
         }
     }
 
@@ -239,6 +314,50 @@ else
         _offset = quizzesResponse.Pagination.NextOffset;
         _totalPages = (int)Math.Ceiling(double.Parse(quizzesResponse.Pagination.TotalCount.ToString()) / _itemsPerPage);
         StateHasChanged();
+    }
+
+    public async Task AddLesson()
+    {
+        lessonRequest.CourseId = Id;
+        var response = await Http.PostAsJsonAsync($"api/v1/admincourses/lesson", lessonRequest);
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorModel = JsonConvert.DeserializeObject<ErrorResponseModel>(await response.Content.ReadAsStringAsync());
+            ToastService.ShowError(errorModel.Errors.FirstOrDefault().Message);
+        }
+        else
+        {
+            var _model = JsonConvert.DeserializeObject<JsonResponse<LessonResponseModel>>(await response.Content.ReadAsStringAsync());
+            _course.Lessons.Add(_model.Data);
+        }
+        _showInputs = false;
+        StateHasChanged();
+    }
+
+    public async Task InitLessonUpdateRequest(int lessonId)
+    {
+        var model = _course.Lessons.FirstOrDefault(x => x.Id == lessonId);
+
+        lessonRequest.Name = model.Name;
+        lessonRequest.Description = model.Description;
+        lessonRequest.QuizzesIds = model.Quizzes.Select(x => x.Item1).ToList();
+        lessonRequest.Time = model.Time;
+        lessonRequest.URL = model.URL;
+    }
+
+    public async Task DeleteLesson(int lessonId)
+    {
+        using var response = await Http.DeleteAsync($"api/v1/admincourses/lesson/{lessonId}");
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorModel = JsonConvert.DeserializeObject<ErrorResponseModel>(await response.Content.ReadAsStringAsync());
+            ToastService.ShowError(errorModel.Errors.FirstOrDefault().Message);
+        }
+        else
+        {
+            _course.Lessons.Remove(_course.Lessons.FirstOrDefault(x => x.Id == lessonId));
+            StateHasChanged();
+        }
     }
 
     public async Task Search()
@@ -261,18 +380,40 @@ else
         StateHasChanged();
     }
 
-    private async Task RemoveQuiz(int quizId)
+    private async Task RemoveQuiz(int quizId, int lessonId)
     {
-        _course.Quizzes.Remove(_course.Quizzes.FirstOrDefault(x => x == quizId));
-        using var response = await Http.PutAsJsonAsync($"api/v1/admincourses/{_course.Id}", new CourseRequestModel() { Name = _course.Name, Description = _course.Description, ContentURLs = _course.ContentURLs, Difficult = _course.Difficult, Language = _course.Language, QuizzesIds = _course.Quizzes.ToArray()});
-        StateHasChanged();
+        await InitLessonUpdateRequest(lessonId);
+        lessonRequest.QuizzesIds.Remove(_quizzes.FirstOrDefault(x => x.Id == quizId).Id);
+        using var response = await Http.PutAsJsonAsync($"api/v1/admincourses/lesson/{lessonId}", lessonRequest);
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorModel = JsonConvert.DeserializeObject<ErrorResponseModel>(await response.Content.ReadAsStringAsync());
+            ToastService.ShowError(errorModel.Errors.FirstOrDefault().Message);
+        }
+        else
+        {
+            var model = JsonConvert.DeserializeObject<JsonResponse<LessonResponseModel>>(await response.Content.ReadAsStringAsync()).Data;
+            _course.Lessons.Find(x => x.Id == lessonId).Quizzes = model.Quizzes;
+            StateHasChanged();
+        }
     }
 
-    private async Task AddQuiz(int quizId)
+    private async Task AddQuiz(int quizId, int lessonId)
     {
-        _course.Quizzes.Add(_quizzes.FirstOrDefault(x => x.Id == quizId).Id);
-        using var response = await Http.PutAsJsonAsync($"api/v1/admincourses/{_course.Id}", new CourseRequestModel() { Name = _course.Name, Description = _course.Description, ContentURLs = _course.ContentURLs, Difficult = _course.Difficult, Language = _course.Language, QuizzesIds = _course.Quizzes.ToArray()});
-        StateHasChanged();
+        await InitLessonUpdateRequest(lessonId);
+        lessonRequest.QuizzesIds.Add(_quizzes.FirstOrDefault(x => x.Id == quizId).Id);
+        using var response = await Http.PutAsJsonAsync($"api/v1/admincourses/lesson/{lessonId}", lessonRequest);
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorModel = JsonConvert.DeserializeObject<ErrorResponseModel>(await response.Content.ReadAsStringAsync());
+            ToastService.ShowError(errorModel.Errors.FirstOrDefault().Message);
+        }
+        else
+        {
+            var model = JsonConvert.DeserializeObject<JsonResponse<LessonResponseModel>>(await response.Content.ReadAsStringAsync()).Data;
+            _course.Lessons.Find(x => x.Id == lessonId).Quizzes = model.Quizzes;
+            StateHasChanged();
+        }
     }
 
     private void EnterEditMode()
