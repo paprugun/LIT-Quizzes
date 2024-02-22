@@ -18,51 +18,50 @@
 else
 {
     <div class="container">
-        <h1>@_assingment.CourseName</h1>
+        <h1><strong>@_assingment.CourseName</strong></h1>
         <h2>@_assingment.Topic</h2>
-        <h3>@_assingment.Language</h3>
         <hr style="width:300px;" class="m-5" />
         <div class="container">
             @if (_assingment.Lessons != null)
             {
                 @foreach (var lesson in _assingment.Lessons)
                 {
-                    <div class="accordion" id="@($"accordion_{lesson.Id}")">
+                    <div class="accordion m-5" id="@($"accordion_{lesson.Id}")">
                         <div class="accordion-item">
                             <h2 class="accordion-header" id="@($"heading_{lesson.Id}")">
                                 <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="@($"#collapse_{lesson.Id}")" aria-expanded="true" aria-controls="@($"collapse_{lesson.Id}")">
-                                    <strong>@(_assingment.Lessons.IndexOf(lesson)). @lesson.Name</strong>
+                                    <strong>@(_assingment.Lessons.IndexOf(lesson) + 1). @lesson.Name</strong>
                                 </button>
                             </h2>
                             <div id="@($"collapse_{lesson.Id}")" class="accordion-collapse collapse" aria-labelledby="@($"heading_{lesson.Id}")" data-bs-parent="#accordionExample">
                                 <div class="accordion-body">
                                     <div class="row">
-                                        <div class="col">
-                                            <h5>@lesson.Description</h5>
+                                        <div class="col mb-1">
+                                            <p>@lesson.Description</p>
                                             <hr class="mt-2 mb-5 w-100"/>
                                             <a class="link-offset-2 link-offset-3-hover link-underline link-underline-opacity-0 link-underline-opacity-75-hover" href="@lesson.URL">@lesson.URL</a>
                                         </div>
                                         <div class="col">
                                             <h3 class="text-center"><strong>Тести по уроку</strong></h3>
-                                            <div class="container">
-                                                <div class="d-flex flex-row px-2 mb-2`">
+                                            <div class="container w-100">
+                                                <div class="row row-cols-1">
                                                     @foreach (var item in lesson.Quizzes)
                                                     {
                                                         if (!lesson.Results.Any(x => x.QuizId == item.Item1))
                                                         {
-                                                            <button type="button" class="btn btn-warning mr-2" @onclick='() => Nv.NavigateTo($"/passQuiz/{item.Item1}")'>@item.Item2</button>
+                                                            <button type="button" class="btn btn-warning m-1 w-100" @onclick='() => Nv.NavigateTo($"/passQuiz/{item.Item1}")'>@item.Item2</button>
                                                         }
                                                     }
                                                 </div>
-                                                <hr class="m-0 w-100" />
-                                                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 mt-5">
+                                                <hr class="w-100 mt-1"/>
+                                                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-2">
                                                     @foreach (var item in lesson.Results)
                                                     {
-                                                        <div class="col-6 col-md-4 col-lg-3 ml-2 mb-3">
+                                                        <div class="col mb-3">
                                                             <div class="border-1 rounded-3 bg-gradient d-flex flex-column h-100">
                                                                 <div class="flex-grow-1">
-                                                                    <h1 class="mb-2">@item.QuizName</h1>
-
+                                                                    <h4 class="m-2">@item.QuizName</h4>
+                                                                    <div class="d-flex justify-content-center"></div>
                                                                     @if (item.CountOfCorrectAnswers >= item.CountOfIncorrectAnswers)
                                                                     {
                                                                         <h5><strong class="text-success">@item.CountOfCorrectAnswers / @(item.CountOfIncorrectAnswers + item.CountOfCorrectAnswers)</strong></h5>
@@ -72,17 +71,14 @@ else
                                                                         <h5><strong class="text-danger">@item.CountOfCorrectAnswers / @(item.CountOfIncorrectAnswers + item.CountOfCorrectAnswers)</strong></h5>
                                                                     }
                                                                 </div>
-                                                                <div class="mt-auto">
-                                                                    <button type="button" class="btn btn-success" @onclick='() => Nv.NavigateTo($"/resultPage/{item.Id}")'>Відповіді</button>
-                                                                    <p class="text-muted">Виканоно @item.JoinedAt</p>
+                                                                <div class="mt-auto d-flex justify-content-center">
+                                                                    <button type="button" class="btn btn-light oi oi-reload" style="color:black;" @onclick='() => Nv.NavigateTo($"/resultPage/{item.Id}")'></button>
                                                                 </div>
+                                                                <p class="text-muted">Виканоно @item.JoinedAt</p>
                                                             </div>
                                                         </div>
                                                     }
                                                 </div>
-
-
-
                                             </div>
                                         </div>
                                     </div>

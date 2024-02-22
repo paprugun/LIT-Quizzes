@@ -16,6 +16,8 @@ namespace BlazorApp.Models.ResponseModels.Course
 
         public string CourseName { get; set; }
 
+        public string CourseTopic { get; set; }
+
         public string UserName { get; set; }
 
         public int CountOfDoneSteps { get; set; }

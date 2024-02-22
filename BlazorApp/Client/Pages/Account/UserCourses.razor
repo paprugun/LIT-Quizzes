@@ -20,7 +20,7 @@
     }
 
     .courses-list-item{
-        margin-top:32px;
+        margin-top: 24px;
         padding: 24px 32px;
         border: 1px solid #e5e5ee;
         border-radius: 16px;
@@ -69,21 +69,23 @@
         background: linear-gradient(to right, #4294f2 0%, #4294f2 calc(100% - width(.course-topic6)), transparent calc(100% - width(.course-topic6)));
     }
 </style>
-<div class="px-4">
+
+<div class="px-4 m-3">
     <h1 style="font-size: 45px; font-weight: 600; margin-top:30px; margin-bottom:40px; color: #191F3D"><b>Ваші курси</b></h1>
     <div class="courses-list">
         @foreach (var course in _courses)
         {
             var rnd = new Random().Next(1, 6).ToString();
             <div class="courses-list-item">
-                <div class="course-topic@(rnd)">@course.CourseName</div>
+                <div class="course-topic@(rnd)">@course.CourseTopic</div>
                 <div class="course-title">@course.CourseName</div>
-                
-                <BlazorBootstrap.Progress Class="mb-3">
+
+                <BlazorBootstrap.Progress Class="mt-3" Style="border: 1px solid lightgrey">
                     @for (int i = 0; i < course.CountOfDoneSteps; i++)
                     {
                         var percent = 100 / (course.CountOfDoneSteps+course.CountOfLeftSteps);
-                        <BlazorBootstrap.ProgressBar Color="ProgressColor.Success" Width="percent" Style="border: 1px solid lightgrey"/>
+                        <BlazorBootstrap.ProgressBar Color="ProgressColor.Success" Width="percent"/>
+                        
                     }
                 </BlazorBootstrap.Progress>
                 <button class="btn btn-warning text-center" style="width: 200px; font-size: 15px; margin-top: 40px" @onclick='() => Nv.NavigateTo($"/assignment/{course.Id}")'><b>Переглянути деталі</b></button>
@@ -92,10 +94,12 @@
     </div>
 </div>
 
-
-<div class="col-12 d-flex align-items-center justify-content-center">
-    <button class="btn btn-warning" @onclick="LoadMore">Завантажити ще</button>
-</div>
+@if (_showLoadBtn)
+{
+    <div class="col-12 d-flex align-items-center justify-content-center">
+        <button class="btn btn-warning" @onclick="LoadMore">Завантажити ще</button>
+    </div>
+}
 @code {
     [CascadingParameter]
     public PageIndexStateProvider State { get; set; }
@@ -104,9 +108,10 @@
 
     #region Additional propeties
     private int? _lastId = 0;
-    private int _itemsPerPage = 9;
+    private int _itemsPerPage = 6;
     private string _filter = String.Empty;
     private string _errString = String.Empty;
+    private bool _showLoadBtn;
     #endregion
 
     private async Task LoadMore()
@@ -153,6 +158,8 @@
     public async Task RefreshTable(CursorPaginationRequestModel<CourseTableColumn> model)
     {
         var response = await _service.GetAllAssignments(model);
+        if (response.Pagination.LastId.HasValue)
+            _showLoadBtn = true;
         _courses = response.Data;
         _itemsPerPage = model.Limit;
         _lastId = response.Pagination.LastId;
@@ -162,6 +169,8 @@
     public async Task UpdateTable(CursorPaginationRequestModel<CourseTableColumn> model)
     {
         var response = await _service.GetAllAssignments(model);
+        if (!response.Pagination.LastId.HasValue)
+            _showLoadBtn = false;
         _courses.AddRange(response.Data);
         _itemsPerPage = model.Limit;
         _lastId = response.Pagination.LastId;

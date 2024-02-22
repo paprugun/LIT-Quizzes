@@ -13,7 +13,8 @@ namespace BlazorApp.Shared.Models.RequestModels.Course
         [Required]
         public int CourseId { get; set; }
 
-        [StringLength(50, ErrorMessage = "Назва уроку не більше 50 символів")]
+        [StringLength(100, ErrorMessage = "Назва уроку не більше 50 символів")]
+        [Required(ErrorMessage = "Ім'я уроку обов'зкове поле")]
         public string Name { get; set; }
 
         public string? Description { get; set; }
@@ -24,7 +25,6 @@ namespace BlazorApp.Shared.Models.RequestModels.Course
 
         public double Time { get; set; }
 
-        [Required]
         public List<int> QuizzesIds { get; set; }
 
     }

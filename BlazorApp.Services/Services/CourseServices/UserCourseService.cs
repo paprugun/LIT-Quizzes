@@ -206,12 +206,14 @@ namespace BlazorApp.Services.Services.CourseServices
                              {
                                  Id = userCourse.Id,
                                  CourseName = userCourse.Course.Name,
+                                 CourseTopic = userCourse.Course.Topic.Name,
                                  CourseId = userCourse.CourseId,
                                  UserId = _userId.Value,
                                  UserName = userCourse.User.UserName,
-                                 CountOfDoneSteps = userCourse.User.QuizzesResults.Where(w => userCourse.Course.Lessons.SelectMany(c => c.Quizzes.Select(q => q.QuizId)).Contains(w.QuizId)).Count(),
-                                 CountOfLeftSteps = userCourse.Course.Lessons.Select(w => w.Quizzes).Count() - userCourse.User.QuizzesResults.Where(w => userCourse.Course.Lessons.SelectMany(c => c.Quizzes.Select(q => q.QuizId)).Contains(w.QuizId)).Count(),
+                                 CountOfDoneSteps = userCourse.Course.Lessons.Count(lesson => lesson.Quizzes.All(quiz => userCourse.User.QuizzesResults.Any(result => result.QuizId == quiz.QuizId))),
+                                 CountOfLeftSteps = userCourse.Course.Lessons.Count() - userCourse.Course.Lessons.Count(lesson => lesson.Quizzes.All(quiz => userCourse.User.QuizzesResults.Any(result => result.QuizId == quiz.QuizId))),
                              });
+
 
             if (search)
                 courses = courses.Where(x => x.CourseName.Contains(model.Search) || x.UserName.Contains(model.Search));

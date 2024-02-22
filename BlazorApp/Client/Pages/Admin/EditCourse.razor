@@ -39,12 +39,12 @@
 
 @if (_course != null)
 {
-    <div class="modal fade overflow-x-scroll" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header w-100">
-                    <h5 class="modal-title" id="exampleModalLabel">Уроки в @_course.Name</h5>
-                    @if (!_showInputs) 
+                    <h5 class="modal-title mr-5" id="exampleModalLabel">Уроки в @_course.Name</h5>
+                    @if (!_showInputs)
                     {
                         <button type="button" class="btn btn-success oi oi-plus ml-5" @onclick="() => _showInputs = true"></button>
                     }
@@ -55,11 +55,10 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
                 </div>
                 <div class="modal-body">
-                    <!--Вот тут должны появлятся 3 инпута в ряд для имени, описания и url курса и кнопка потдверждения-->
                     @if (_showInputs)
                     {
                         <div class="m-2">
-                            <EditForm Model="lessonRequest">
+                            <EditForm EditContext="@editContext">
                                 <DataAnnotationsValidator />
                                 <div class="form-group">
                                     <label for="lessonName">Назва</label>
@@ -87,70 +86,71 @@
                             @foreach (var item in _course.Lessons)
                             {
                                 <div class="row mb-2 justify-content-center">
-                                    <div class="card border-dark gx-4 h-100" style="max-width: 25rem;">
-                                    <div class="card-header h-25 d-flex flex-row">
-                                        <button class="btn-close m-1" @onclick="() => DeleteLesson(item.Id)"></button>
-                                        <h5 class=""><strong>@item.Name</strong></h5>
-                                    </div>
-                                    <div class="card-body h-75">
-                                        @if (item.Description.Length >= 100)
-                                        {
-                                            <p>
-                                                @(item.Description.Substring(0, 101) + "...");
-                                            </p>
-                                        }
-                                        else
-                                        {
-                                            <p>
-                                                @item.Description
-                                            </p>
-                                        }
-                                        <div class="accordion mt-3" id="@($"accordion_{item.Id}")">
-                                            <div class="accordion-item">
-                                                <h2 class="accordion-header" id="@($"heading_{item.Id}")">
-                                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="@($"#collapse_{item.Id}")" aria-expanded="false" aria-controls="@($"collapse_{item.Id}")">
-                                                        Тести
-                                                    </button>
-                                                </h2>
-                                                <div id="@($"collapse_{item.Id}")" class="accordion-collapse collapse" aria-labelledby="@($"heading_{item.Id}")" data-bs-parent="#accordionExample">
-                                                    <div class="accordion-body">
-                                                        <div class="quiz-block">
-                                                            <div class="d-flex align-items-center justify-content-center h-100">
-                                                                <div class="d-flex flex-row">
-                                                                    <div class="input-group mb-3">
-                                                                        <input type="text" class="form-control" placeholder="Пошук..." @onchange="(ChangeEventArgs e) => _filter = e.Value.ToString()">
-                                                                        <button class="btn btn-sm btn-outline-primary" type="button" @onclick="Search">Пошук</button>
-                                                                        @if (_filter != String.Empty)
-                                                                        {
-                                                                            <button class="btn-close" type="button" @onclick="CleanFilters" style="margin-left: 15px"></button>
-                                                                        }
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <ul class="list-group">
-                                                                @foreach (var quiz in _quizzes)
-                                                                {
-                                                                    <li class="list-group-item">
-                                                                        <a class="justify-self-start" data-bs-dismiss="modal" @onclick='() => Nv.NavigateTo($"/editQuiz/{quiz.Id}")'><b>@quiz.Name</b></a>
-                                                                        <div class="w-100 float-end">
-                                                                            @if (item.Quizzes.Select(x => x.Item1).Contains(quiz.Id))
+                                    <div class="card border-light gx-4 h-100" style="max-width: 25rem;">
+                                        <div class="card-header h-25 d-flex flex-row">
+                                            <button class="btn-close m-1" @onclick="() => DeleteLesson(item.Id)"></button>
+                                            <h5 style="color: #191F3D"><strong>@item.Name</strong></h5>
+                                        </div>
+                                        <div class="card-body h-75">
+                                            @if (item.Description.Length >= 200)
+                                            {
+                                                <p>
+                                                    @(item.Description.Substring(0, 201) + "...")
+                                                </p>
+                                            }
+                                            else
+                                            {
+                                                <p>
+                                                    @item.Description
+                                                </p>
+                                            }
+                                            <div class="accordion mt-3" id="@($"accordion_{item.Id}")">
+                                                <div class="accordion-item">
+                                                    <h2 class="accordion-header" id="@($"heading_{item.Id}")">
+                                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="@($"#collapse_{item.Id}")" aria-expanded="false" aria-controls="@($"collapse_{item.Id}")">
+                                                            Тести
+                                                        </button>
+                                                    </h2>
+                                                    <div id="@($"collapse_{item.Id}")" class="accordion-collapse collapse" aria-labelledby="@($"heading_{item.Id}")" data-bs-parent="#accordionExample">
+                                                        <div class="accordion-body">
+                                                            <div class="quiz-block">
+                                                                <div class="d-flex align-items-center justify-content-center h-100">
+                                                                    <div class="d-flex flex-row">
+                                                                        <div class="input-group mb-3">
+                                                                            <input type="text" class="form-control" placeholder="Пошук..." @onchange="(ChangeEventArgs e) => _filter = e.Value.ToString()">
+                                                                            <button class="btn btn-sm btn-outline-primary" type="button" @onclick="Search">Пошук</button>
+                                                                            @if (_filter != String.Empty)
                                                                             {
-                                                                                <button class="btn btn-danger oi oi-trash" @onclick='() => RemoveQuiz(quiz.Id, item.Id)'></button>
-                                                                            }
-                                                                            else
-                                                                            {
-                                                                                <button class="btn btn-outline-success oi oi-plus" @onclick='() => AddQuiz(quiz.Id, item.Id)'></button>
+                                                                                <button class="btn-close" type="button" @onclick="CleanFilters" style="margin-left: 15px"></button>
                                                                             }
                                                                         </div>
-                                                                    </li>
-                                                                }
-                                                            </ul>
-                                                            <div class="d-flex justify-content-center" style="margin:15px;">
-                                                                <MyPagination TotalPages="@(_totalPages != 0 ? _totalPages : 1)"
-                                                                              PageIndex="@State.PageIndex"
-                                                                              Radius="3"
-                                                                              OnSelectedPage="@SelectedPage">
-                                                                </MyPagination>
+                                                                    </div>
+                                                                </div>
+                                                                <ul class="list-group">
+                                                                    @foreach (var quiz in _quizzes)
+                                                                    {
+                                                                        <li class="list-group-item">
+                                                                            <a class="justify-self-start" data-bs-dismiss="modal" @onclick='() => Nv.NavigateTo($"/editQuiz/{quiz.Id}")'><b>@quiz.Name</b></a>
+                                                                            <div class="w-100 float-end">
+                                                                                @if (item.Quizzes.Select(x => x.Item1).Contains(quiz.Id))
+                                                                                {
+                                                                                    <button class="btn btn-danger oi oi-trash" @onclick='() => RemoveQuiz(quiz.Id, item.Id)'></button>
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    <button class="btn btn-outline-success oi oi-plus" @onclick='() => AddQuiz(quiz.Id, item.Id)'></button>
+                                                                                }
+                                                                            </div>
+                                                                        </li>
+                                                                    }
+                                                                </ul>
+                                                                <div class="d-flex justify-content-center" style="margin:15px;">
+                                                                    <MyPagination TotalPages="@(_totalPages != 0 ? _totalPages : 1)"
+                                                                                  PageIndex="@State.PageIndex"
+                                                                                  Radius="3"
+                                                                                  OnSelectedPage="@SelectedPage">
+                                                                    </MyPagination>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -158,7 +158,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                </div>
                                 </div>
                             }
                         </div>
@@ -182,22 +181,22 @@
                         {
                             @foreach (var result in _course.UsersResults)
                             {
-                                <div class="col">
-                                    <div class="card text-white card h-100" style="max-width: 20rem;">
+                                <div class="col mt-2">
+                                    <div class="card border-light text-white h-100">
                                         <div class="card-header">
                                             <button class="btn-close" @onclick="() => DeleteResult(result.Id)"></button>
                                             <h3><a class="card-link" href="/userinfo/@result.UserId" data-bs-dismiss="modal" @onclick='() => Nv.NavigateTo($"/userinfo/{result.UserId}")'>@result.UserName</a></h3>
                                         </div>
                                         <div class="card-body">
-                                            <h4><strong class="text-success">@result.CountOfDoneSteps</strong> виконано</h4>
-                                            <br />
-                                            <h4><strong class="text-danger">@result.CountOfLeftSteps</strong> залишилось</h4>
+                                            <div class="d-flex flex-row">
+                                                <h4 class="text-success p-1" style="border-right: 3px solid #333;">@result.CountOfDoneSteps виконано</h4>
+                                                <h4 class="text-danger p-1">@result.CountOfLeftSteps залишилось</h4>
+                                            </div>
                                         </div>
                                         <div class="card-footer">
                                             <h6 class="card-subtitle text-muted"></h6>
                                         </div>
                                     </div>
-                                    <br />
                                 </div>
 
                             }
@@ -210,12 +209,12 @@
 
     <div class="container">
         <h1>@_course.Name</h1>
-        <hr style="text-decoration-color:green" width="300px"/>
+        <hr width="300px" />
         <h4>@_course.Topic</h4>
-        <h4>@_course.Description</h4>
+        <p>@_course.Description</p>
     </div>
 
-    <div class="container">
+    <div class="container mt-2">
         <div class="row g-4">
             <div class="col">
                 <div class="card text-white bg-success gx-4" style="width: 20rem; height: 250px;">
@@ -259,6 +258,7 @@ else
     AdminCourseResponseModel _course = new AdminCourseResponseModel();
     CourseRequestModel _updCourse = new CourseRequestModel();
     List<SmallQuizResponse> _quizzes = new List<SmallQuizResponse>();
+    EditContext? editContext;
 
     LessonRequestModel lessonRequest = new LessonRequestModel();
 
@@ -287,6 +287,7 @@ else
         }
         else
         {
+            editContext = new EditContext(lessonRequest);
             using var response = await Http.GetAsync($"api/v1/admincourses/{Id}");
             if (!response.IsSuccessStatusCode)
             {
@@ -319,19 +320,22 @@ else
     public async Task AddLesson()
     {
         lessonRequest.CourseId = Id;
-        var response = await Http.PostAsJsonAsync($"api/v1/admincourses/lesson", lessonRequest);
-        if (!response.IsSuccessStatusCode)
+        if (editContext != null && editContext.Validate())
         {
-            var errorModel = JsonConvert.DeserializeObject<ErrorResponseModel>(await response.Content.ReadAsStringAsync());
-            ToastService.ShowError(errorModel.Errors.FirstOrDefault().Message);
+            var response = await Http.PostAsJsonAsync($"api/v1/admincourses/lesson", lessonRequest);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorModel = JsonConvert.DeserializeObject<ErrorResponseModel>(await response.Content.ReadAsStringAsync());
+                ToastService.ShowError(errorModel.Errors.FirstOrDefault().Message);
+            }
+            else
+            {
+                var _model = JsonConvert.DeserializeObject<JsonResponse<LessonResponseModel>>(await response.Content.ReadAsStringAsync());
+                _course.Lessons.Add(_model.Data);
+            }
+            _showInputs = false;
+            StateHasChanged();
         }
-        else
-        {
-            var _model = JsonConvert.DeserializeObject<JsonResponse<LessonResponseModel>>(await response.Content.ReadAsStringAsync());
-            _course.Lessons.Add(_model.Data);
-        }
-        _showInputs = false;
-        StateHasChanged();
     }
 
     public async Task InitLessonUpdateRequest(int lessonId)

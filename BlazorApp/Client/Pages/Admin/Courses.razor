@@ -19,39 +19,46 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Створити тест</h5>
+                    <h5 class="modal-title" id="exampleModalLabel">Створити курс</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
                 </div>
                 <div class="modal-body">
-                    <h4 class="card-title">Введіть назву:</h4>
-                    <div class="form-group">
-                        <input type="text" class="form-control" @onchange="(ChangeEventArgs e) => name = e.Value.ToString()">
-                    </div>
-                    <h5 class="card-title">Введіть опис:</h5>
-                    <div class="form-group">
-                        <input type="text" class="form-control" @onchange="(ChangeEventArgs e) => description = e.Value.ToString()">
-                    </div>
-                    <h5 class="card-title">Введіть мову:</h5>
-                    <div class="form-group">
-                        <input type="text" class="form-control" @onchange="(ChangeEventArgs e) => langguage = e.Value.ToString()">
-                    </div>
-                    <h5 class="card-title">Введіть складність:</h5>
-                    <div class="form-group">
-                        <input type="number" class="form-control" @onchange="(ChangeEventArgs e) => diff = int.Parse(e.Value.ToString())">
-                    </div>
-                    <div class="form-group">
-                        <label for="exampleSelect1" class="form-label mt-4">Виберіть тему:</label>
-                        <select class="form-select" id="exampleSelect1" @onchange="(ChangeEventArgs e) => _topic = e.Value.ToString()">
-                            @foreach (var item in _topics)
-                            {
-                                <option>@item.Name</option>
-                            }
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрити</button>
-                    <button type="button" class="btn btn-primary" @onclick="CreateCourse" data-bs-dismiss="modal">Створити</button>
+                    <EditForm Model="@courseRequest" OnValidSubmit="@CreateCourse">
+                        <DataAnnotationsValidator />
+                        <h4 class="card-title">Введіть назву:</h4>
+                        <div class="form-group">
+                            <InputText class="form-control" @bind-Value="courseRequest.Name" />
+                            <ValidationMessage For="@(() => courseRequest.Name)" />
+                        </div>
+                        <h5 class="card-title">Введіть опис:</h5>
+                        <div class="form-group">
+                            <InputText class="form-control" @bind-Value="courseRequest.Description" />
+                            <ValidationMessage For="@(() => courseRequest.Description)" />
+                        </div>
+                        <h5 class="card-title">Введіть мову:</h5>
+                        <div class="form-group">
+                            <InputText class="form-control" @bind-Value="courseRequest.Language" />
+                            <ValidationMessage For="@(() => courseRequest.Language)" />
+                        </div>
+                        <h5 class="card-title">Введіть складність:</h5>
+                        <div class="form-group">
+                            <InputNumber class="form-control" @bind-Value="courseRequest.Difficult" />
+                            <ValidationMessage For="@(() => courseRequest.Difficult)" />
+                        </div>
+                        <div class="form-group">
+                            <label for="exampleSelect1" class="form-label mt-4">Виберіть тему:</label>
+                            <select class="form-select" id="exampleSelect1" @bind="@courseRequest.Topic">
+                                @foreach (var item in _topics)
+                                {
+                                    <option value="@item.Id">@item.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрити</button>
+                            <button type="submit" class="btn btn-primary">Створити</button>
+                        </div>
+                    </EditForm>
                 </div>
             </div>
         </div>
@@ -119,6 +126,8 @@ else
 
     private List<TopicResponse> _topics = new List<TopicResponse>();
     private List<SmallCourseResponseModel> _allCourses = new List<SmallCourseResponseModel>();
+    CourseRequestModel courseRequest = new CourseRequestModel();
+    EditContext? editContext;
 
     #region additional props
 
@@ -154,6 +163,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        editContext = new EditContext(courseRequest);
         if (!await Layout.IsUserAdmin())
         {
             Nv.NavigateTo("/accessdenied");
@@ -182,15 +192,17 @@ else
 
     public async Task CreateCourse()
     {
-        var postBody = new CourseRequestModel() { Name = name, Description = description, Difficult = diff, Language = langguage, Topic = _topic};
-        using var response = await Http.PostAsJsonAsync("api/v1/admincourses", postBody);
-        if (!response.IsSuccessStatusCode)
+        if (editContext != null && editContext.Validate())
         {
-            var errorModel = JsonConvert.DeserializeObject<ErrorResponseModel>(await response.Content.ReadAsStringAsync());
-            ToastService.ShowError(errorModel.Errors.FirstOrDefault().Message);
-        }
+            using var response = await Http.PostAsJsonAsync("api/v1/admincourses", courseRequest);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorModel = JsonConvert.DeserializeObject<ErrorResponseModel>(await response.Content.ReadAsStringAsync());
+                ToastService.ShowError(errorModel.Errors.FirstOrDefault().Message);
+            }
 
-        await RefreshTable(new PaginationRequestModel<CourseTableColumn>());
+            await RefreshTable(new PaginationRequestModel<CourseTableColumn>());
+        }
     }
 
     public async Task RefreshTopics()
@@ -247,4 +259,4 @@ else
         }
 
     }
-}
+    }

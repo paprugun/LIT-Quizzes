@@ -78,7 +78,7 @@
                 <div class="accordion-body">
                     <div class="row row-cols-3">
 
-                        <div class="col">
+                        <div class="col mt-3">
                             <div class="card text-white bg-success gx-4 h-100" style="max-width: 20rem;">
                                 <div class="card-header h-25"><h5 class="text-center">Нове запитання</h5></div>
                                 <button class="card-body btn btn-dark h-75" data-bs-toggle="modal" data-bs-target="#exampleModal">
@@ -92,7 +92,7 @@
 
                             @if (question.Answers != null)
                             {
-                                <div class="col">
+                                <div class="col mt-3">
                                     <div class="card text-white gx-4 h-100">
                                         <div class="card-header text-muted h-25">
                                             <p><button class="btn-close" @onclick="() => DeleteQuestion(question.Id)"></button>@question.Question</p>
